@@ -12,6 +12,27 @@ import PlayerStats from '../components/PlayerStats';
 const PANEL_TYPES = ['props', 'teamStats', 'playerStats'];
 const PANEL_DURATION = 10000; // 10 seconds per panel
 
+// Build game context for likelihood calculations
+function buildGameContext(gameData) {
+  if (!gameData) return {};
+
+  const { quarters, scores } = gameData;
+
+  // Determine current quarter (1-4)
+  let quarter = 1;
+  if (quarters.q1.completed && !quarters.q2.completed) quarter = 2;
+  else if (quarters.q2.completed && !quarters.q3.completed) quarter = 3;
+  else if (quarters.q3.completed && !quarters.q4.completed) quarter = 4;
+  else if (quarters.q4.completed) quarter = 4;
+
+  return {
+    quarter,
+    homeScore: scores.home,
+    awayScore: scores.away,
+    includeDoubleScores: true,
+  };
+}
+
 function DisplayPage() {
   const { gameData, loading, error } = useGameData(2000);
   const { oddsData } = useOddsData(15000);
@@ -90,7 +111,12 @@ function DisplayPage() {
               <h3 className="nbc-panel-title">SQUARES POOL - $100 POT</h3>
             </div>
             <div className="flex-1 p-4 flex items-center justify-center">
-              <SquaresGrid gameData={gameData} displayMode />
+              <SquaresGrid
+                gameData={gameData}
+                displayMode
+                showLikelihood={gameData.grid.locked}
+                gameContext={buildGameContext(gameData)}
+              />
             </div>
           </div>
         </div>

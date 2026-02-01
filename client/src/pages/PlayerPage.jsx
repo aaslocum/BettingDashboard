@@ -8,6 +8,27 @@ import ClaimModal from '../components/ClaimModal';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 
+// Build game context for likelihood calculations
+function buildGameContext(gameData) {
+  if (!gameData) return {};
+
+  const { quarters, scores } = gameData;
+
+  // Determine current quarter (1-4)
+  let quarter = 1;
+  if (quarters.q1.completed && !quarters.q2.completed) quarter = 2;
+  else if (quarters.q2.completed && !quarters.q3.completed) quarter = 3;
+  else if (quarters.q3.completed && !quarters.q4.completed) quarter = 4;
+  else if (quarters.q4.completed) quarter = 4;
+
+  return {
+    quarter,
+    homeScore: scores.home,
+    awayScore: scores.away,
+    includeDoubleScores: true,
+  };
+}
+
 function PlayerPage() {
   const { gameData, loading, error, claimSquare } = useGameData(3000);
   const { oddsData } = useOddsData(30000);
@@ -68,6 +89,8 @@ function PlayerPage() {
         <SquaresGrid
           gameData={gameData}
           onSquareClick={handleSquareClick}
+          showLikelihood={gameData.grid.locked}
+          gameContext={buildGameContext(gameData)}
         />
         {!gameData.grid.locked && (
           <p className="text-center text-sm text-gray-400 mt-3">
