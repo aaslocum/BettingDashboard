@@ -61,10 +61,10 @@ router.get('/props/mock', (req, res) => {
   res.json(getMockPlayerProps());
 });
 
-// GET /api/odds/team-stats - Get team game statistics
-router.get('/team-stats', (req, res) => {
+// GET /api/odds/team-stats - Get team game statistics (ESPN or mock)
+router.get('/team-stats', async (req, res) => {
   try {
-    const stats = getTeamStats();
+    const stats = await getTeamStats();
     res.json(stats);
   } catch (error) {
     console.error('Error fetching team stats:', error);
@@ -72,10 +72,10 @@ router.get('/team-stats', (req, res) => {
   }
 });
 
-// GET /api/odds/player-stats - Get player game statistics
-router.get('/player-stats', (req, res) => {
+// GET /api/odds/player-stats - Get player game statistics (ESPN or mock)
+router.get('/player-stats', async (req, res) => {
   try {
-    const stats = getPlayerGameStats();
+    const stats = await getPlayerGameStats();
     res.json(stats);
   } catch (error) {
     console.error('Error fetching player stats:', error);

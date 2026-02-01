@@ -1,7 +1,14 @@
-// Mock game statistics service
-// In production, this would integrate with a live sports data API
+// Game statistics service
+// Uses ESPN API for live data, falls back to mock data
 
-let mockTeamStats = {
+import {
+  getCurrentGameId,
+  getTeamStatistics,
+  getPlayerStatistics
+} from './espnService.js';
+
+// Mock data for when ESPN is unavailable or no game is live
+const mockTeamStats = {
   home: {
     totalYards: 287,
     passingYards: 198,
@@ -26,7 +33,7 @@ let mockTeamStats = {
   }
 };
 
-let mockPlayerStats = {
+const mockPlayerStats = {
   passing: [
     { name: 'P. Mahomes', team: 'KC', comp: 18, att: 24, yards: 198, td: 2, int: 0, rating: 128.5 },
     { name: 'J. Hurts', team: 'PHI', comp: 21, att: 29, yards: 241, td: 1, int: 1, rating: 98.2 }
@@ -44,72 +51,115 @@ let mockPlayerStats = {
   ]
 };
 
-// Simulate live stat updates
-let updateInterval = null;
+// Configuration
+let useEspnApi = true;
+let cachedTeamStats = null;
+let cachedPlayerStats = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 10000; // 10 seconds
 
-function randomStatChange(value, maxChange) {
-  const change = Math.floor(Math.random() * maxChange);
-  return value + change;
-}
+/**
+ * Get team statistics - tries ESPN first, falls back to mock
+ */
+export async function getTeamStats() {
+  const now = Date.now();
 
-export function startStatUpdates() {
-  if (updateInterval) return;
-
-  updateInterval = setInterval(() => {
-    // Randomly update some stats to simulate live game
-    if (Math.random() > 0.7) {
-      const team = Math.random() > 0.5 ? 'home' : 'away';
-      mockTeamStats[team].totalYards = randomStatChange(mockTeamStats[team].totalYards, 8);
-      mockTeamStats[team].passingYards = randomStatChange(mockTeamStats[team].passingYards, 6);
-      mockTeamStats[team].rushingYards = randomStatChange(mockTeamStats[team].rushingYards, 4);
-    }
-  }, 15000);
-}
-
-export function stopStatUpdates() {
-  if (updateInterval) {
-    clearInterval(updateInterval);
-    updateInterval = null;
+  // Return cache if fresh
+  if (cachedTeamStats && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedTeamStats;
   }
-}
 
-export function getTeamStats() {
-  return mockTeamStats;
-}
-
-export function getPlayerGameStats() {
-  return mockPlayerStats;
-}
-
-export function resetStats() {
-  mockTeamStats = {
-    home: {
-      totalYards: 0,
-      passingYards: 0,
-      rushingYards: 0,
-      firstDowns: 0,
-      thirdDownPct: '0/0 (0%)',
-      turnovers: 0,
-      timeOfPossession: '00:00',
-      sacks: 0,
-      penalties: '0-0'
-    },
-    away: {
-      totalYards: 0,
-      passingYards: 0,
-      rushingYards: 0,
-      firstDowns: 0,
-      thirdDownPct: '0/0 (0%)',
-      turnovers: 0,
-      timeOfPossession: '00:00',
-      sacks: 0,
-      penalties: '0-0'
+  if (useEspnApi) {
+    try {
+      const gameId = await getCurrentGameId();
+      if (gameId) {
+        const stats = await getTeamStatistics(gameId);
+        if (stats) {
+          cachedTeamStats = { ...stats, source: 'espn', mock: false };
+          cacheTimestamp = now;
+          return cachedTeamStats;
+        }
+      }
+    } catch (error) {
+      console.error('ESPN team stats error, using mock:', error.message);
     }
-  };
+  }
 
-  mockPlayerStats = {
-    passing: [],
-    rushing: [],
-    receiving: []
-  };
+  // Fall back to mock data
+  cachedTeamStats = { ...mockTeamStats, source: 'mock', mock: true };
+  cacheTimestamp = now;
+  return cachedTeamStats;
+}
+
+/**
+ * Get player game statistics - tries ESPN first, falls back to mock
+ */
+export async function getPlayerGameStats() {
+  const now = Date.now();
+
+  // Return cache if fresh
+  if (cachedPlayerStats && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedPlayerStats;
+  }
+
+  if (useEspnApi) {
+    try {
+      const gameId = await getCurrentGameId();
+      if (gameId) {
+        const stats = await getPlayerStatistics(gameId);
+        if (stats && stats.passing.length > 0) {
+          cachedPlayerStats = { ...stats, source: 'espn', mock: false };
+          cacheTimestamp = now;
+          return cachedPlayerStats;
+        }
+      }
+    } catch (error) {
+      console.error('ESPN player stats error, using mock:', error.message);
+    }
+  }
+
+  // Fall back to mock data
+  cachedPlayerStats = { ...mockPlayerStats, source: 'mock', mock: true };
+  cacheTimestamp = now;
+  return cachedPlayerStats;
+}
+
+/**
+ * Enable/disable ESPN API usage
+ */
+export function setUseEspnApi(enabled) {
+  useEspnApi = enabled;
+  // Clear cache when toggling
+  cachedTeamStats = null;
+  cachedPlayerStats = null;
+}
+
+/**
+ * Check if using ESPN API
+ */
+export function isUsingEspnApi() {
+  return useEspnApi;
+}
+
+/**
+ * Clear stats cache
+ */
+export function clearStatsCache() {
+  cachedTeamStats = null;
+  cachedPlayerStats = null;
+  cacheTimestamp = 0;
+}
+
+/**
+ * Get mock team stats (always returns mock, for testing)
+ */
+export function getMockTeamStats() {
+  return { ...mockTeamStats, source: 'mock', mock: true };
+}
+
+/**
+ * Get mock player stats (always returns mock, for testing)
+ */
+export function getMockPlayerStats() {
+  return { ...mockPlayerStats, source: 'mock', mock: true };
 }

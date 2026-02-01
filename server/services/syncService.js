@@ -1,5 +1,6 @@
-import { fetchLiveScores, getMockScores, getMockOdds, fetchSuperBowlOdds } from './oddsService.js';
-import { getGameData, saveGameData, updateScores, updateTeams } from './dataService.js';
+import { getMockScores, getMockOdds } from './oddsService.js';
+import { getGameData, updateScores, updateTeams } from './dataService.js';
+import { getLiveScores, setCurrentGameId } from './espnService.js';
 
 // Auto-sync state
 let syncState = {
@@ -9,7 +10,8 @@ let syncState = {
   lastError: null,
   syncInterval: 10000, // 10 seconds
   gameId: null, // Track which game we're syncing
-  useMockData: true // Use mock data when no API key
+  useEspn: true, // Use ESPN API by default
+  useMockData: false // Fall back to mock data
 };
 
 // Get current sync status
@@ -20,7 +22,9 @@ export function getSyncStatus() {
     lastError: syncState.lastError,
     syncInterval: syncState.syncInterval,
     gameId: syncState.gameId,
-    useMockData: syncState.useMockData
+    useEspn: syncState.useEspn,
+    useMockData: syncState.useMockData,
+    source: syncState.useEspn ? 'ESPN' : (syncState.useMockData ? 'Mock' : 'Odds API')
   };
 }
 
@@ -30,9 +34,15 @@ export function startAutoSync(apiKey, options = {}) {
     return { success: false, message: 'Auto-sync already running' };
   }
 
-  syncState.useMockData = !apiKey;
+  // Prefer ESPN, fall back to Odds API if key provided, otherwise mock
+  syncState.useEspn = options.useEspn !== false;
+  syncState.useMockData = !syncState.useEspn && !apiKey;
   syncState.gameId = options.gameId || null;
   syncState.syncInterval = options.interval || 10000;
+
+  if (syncState.gameId) {
+    setCurrentGameId(syncState.gameId);
+  }
 
   // Do initial sync
   performSync(apiKey);
@@ -43,9 +53,10 @@ export function startAutoSync(apiKey, options = {}) {
   }, syncState.syncInterval);
 
   syncState.enabled = true;
-  console.log(`Auto-sync started (mock: ${syncState.useMockData}, interval: ${syncState.syncInterval}ms)`);
+  const source = syncState.useEspn ? 'ESPN' : (syncState.useMockData ? 'Mock' : 'Odds API');
+  console.log(`Auto-sync started (source: ${source}, interval: ${syncState.syncInterval}ms)`);
 
-  return { success: true, message: 'Auto-sync started' };
+  return { success: true, message: `Auto-sync started (${source})` };
 }
 
 // Stop auto-sync
@@ -68,58 +79,57 @@ export function stopAutoSync() {
 // Perform a single sync operation
 async function performSync(apiKey) {
   try {
-    let scoresData;
-    let oddsData;
+    let teamsData = null;
+    let scoresData = null;
 
-    if (syncState.useMockData) {
-      // Use mock data with live simulation
-      scoresData = getMockScores(true);
-      oddsData = getMockOdds();
-    } else {
-      // Fetch real data
-      scoresData = await fetchLiveScores(apiKey);
-      oddsData = await fetchSuperBowlOdds(apiKey);
-    }
+    // Try ESPN first
+    if (syncState.useEspn) {
+      try {
+        const espnData = await getLiveScores();
+        if (espnData) {
+          teamsData = espnData.teams;
+          scoresData = espnData.scores;
 
-    // Find the game to sync (first game or specific gameId)
-    let game = scoresData.games[0];
-    if (syncState.gameId) {
-      game = scoresData.games.find(g => g.id === syncState.gameId) || game;
-    }
-
-    if (!game) {
-      throw new Error('No game found to sync');
-    }
-
-    const gameData = getGameData();
-
-    // Update teams if not locked (only sync teams before game is locked)
-    if (!gameData.grid.locked) {
-      // Find matching odds data for team abbreviations
-      const oddsGame = oddsData.games.find(g => g.id === game.id) || oddsData.games[0];
-
-      const homeTeam = {
-        name: game.homeTeam,
-        abbreviation: getTeamAbbreviation(game.homeTeam)
-      };
-      const awayTeam = {
-        name: game.awayTeam,
-        abbreviation: getTeamAbbreviation(game.awayTeam)
-      };
-
-      // Only update if teams changed
-      if (gameData.teams.home.name !== homeTeam.name || gameData.teams.away.name !== awayTeam.name) {
-        updateTeams(homeTeam, awayTeam);
-        console.log(`Teams synced: ${awayTeam.name} @ ${homeTeam.name}`);
+          // Store game ID for stats lookup
+          if (espnData.gameId) {
+            setCurrentGameId(espnData.gameId);
+            syncState.gameId = espnData.gameId;
+          }
+        }
+      } catch (espnError) {
+        console.warn('ESPN sync failed, trying fallback:', espnError.message);
       }
     }
 
-    // Update scores if game has scores
-    if (game.scores) {
-      const homeScore = parseInt(game.scores.home) || 0;
-      const awayScore = parseInt(game.scores.away) || 0;
+    // Fall back to mock data if ESPN failed or disabled
+    if (!teamsData && syncState.useMockData) {
+      const mockData = getMockScores(true);
+      const game = mockData.games[0];
+      if (game) {
+        teamsData = {
+          home: { name: game.homeTeam, abbreviation: getTeamAbbreviation(game.homeTeam) },
+          away: { name: game.awayTeam, abbreviation: getTeamAbbreviation(game.awayTeam) }
+        };
+        scoresData = game.scores;
+      }
+    }
 
-      // Only update if scores changed
+    // Update game data if we got something
+    const gameData = getGameData();
+
+    if (teamsData && !gameData.grid.locked) {
+      // Only update teams before grid is locked
+      if (gameData.teams.home.name !== teamsData.home.name ||
+          gameData.teams.away.name !== teamsData.away.name) {
+        updateTeams(teamsData.home, teamsData.away);
+        console.log(`Teams synced: ${teamsData.away.name} @ ${teamsData.home.name}`);
+      }
+    }
+
+    if (scoresData) {
+      const homeScore = parseInt(scoresData.home) || 0;
+      const awayScore = parseInt(scoresData.away) || 0;
+
       if (gameData.scores.home !== homeScore || gameData.scores.away !== awayScore) {
         updateScores(homeScore, awayScore);
         console.log(`Scores synced: ${awayScore} - ${homeScore}`);
