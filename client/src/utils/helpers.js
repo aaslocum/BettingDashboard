@@ -56,3 +56,79 @@ export function isWinningSquare(index, homeNumbers, awayNumbers, homeScore, away
 
   return index === awayRow * 10 + homeCol;
 }
+
+// Calculate player statistics from game data
+export function calculatePlayerStats(gameData) {
+  const { grid, quarters } = gameData;
+  const { squares } = grid;
+  const COST_PER_SQUARE = 1; // $1 per square
+
+  // Count squares per player
+  const playerSquares = {};
+  squares.forEach((initials, index) => {
+    if (initials) {
+      if (!playerSquares[initials]) {
+        playerSquares[initials] = { squares: [], count: 0 };
+      }
+      playerSquares[initials].squares.push(index);
+      playerSquares[initials].count++;
+    }
+  });
+
+  // Calculate winnings per player from completed quarters
+  const playerWinnings = {};
+  Object.entries(quarters).forEach(([quarterKey, quarter]) => {
+    if (quarter.completed && quarter.winner) {
+      const winner = quarter.winner.player;
+      if (!playerWinnings[winner]) {
+        playerWinnings[winner] = { total: 0, quarters: [] };
+      }
+      playerWinnings[winner].total += quarter.prize;
+      playerWinnings[winner].quarters.push({
+        quarter: quarterKey,
+        prize: quarter.prize
+      });
+    }
+  });
+
+  // Combine into player stats
+  const allPlayers = new Set([
+    ...Object.keys(playerSquares),
+    ...Object.keys(playerWinnings)
+  ]);
+
+  const stats = Array.from(allPlayers).map(initials => {
+    const squareCount = playerSquares[initials]?.count || 0;
+    const betAmount = squareCount * COST_PER_SQUARE;
+    const winnings = playerWinnings[initials]?.total || 0;
+    const net = winnings - betAmount;
+
+    return {
+      initials,
+      squareCount,
+      betAmount,
+      winnings,
+      net,
+      quarterWins: playerWinnings[initials]?.quarters || [],
+      squareIndices: playerSquares[initials]?.squares || []
+    };
+  });
+
+  // Sort by net (highest first), then by squares claimed
+  stats.sort((a, b) => {
+    if (b.net !== a.net) return b.net - a.net;
+    return b.squareCount - a.squareCount;
+  });
+
+  // Calculate totals
+  const totals = {
+    totalSquares: squares.filter(s => s !== null).length,
+    totalBets: squares.filter(s => s !== null).length * COST_PER_SQUARE,
+    totalPaidOut: Object.values(quarters)
+      .filter(q => q.completed)
+      .reduce((sum, q) => sum + q.prize, 0),
+    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0)
+  };
+
+  return { players: stats, totals };
+}

@@ -24,7 +24,8 @@ BettingDashboard/
 │   │   │   ├── OddsDisplay.jsx    # Betting odds display
 │   │   │   ├── Scoreboard.jsx     # Score and prize display
 │   │   │   ├── ClaimModal.jsx     # Square claiming modal
-│   │   │   └── WinnersPanel.jsx   # Quarter winners display
+│   │   │   ├── WinnersPanel.jsx   # Quarter winners display
+│   │   │   └── PlayerStats.jsx    # Player bet/winnings tracker
 │   │   ├── pages/
 │   │   │   ├── PlayerPage.jsx     # Main player interface
 │   │   │   ├── AdminPage.jsx      # Admin controls
@@ -70,10 +71,17 @@ BettingDashboard/
 - Falls back to simulated game data when no API key configured
 - Admin only needs to mark quarter winners
 
-### 4. Display Modes
-- **Player View** (`/`): Claim squares, view grid and odds
-- **Admin View** (`/admin`): Control game state, auto-sync, quarter payouts
-- **TV Display** (`/display`): Full-screen view for projector/TV
+### 4. Player Statistics & Payouts
+- Tracks squares owned per player (bet amount)
+- Tracks winnings from quarter payouts
+- Shows net position (winnings - bets)
+- Admin view shows "To Collect" and "To Pay Out" summaries
+- Helps manage bet collection and prize payouts
+
+### 5. Display Modes
+- **Player View** (`/`): Claim squares, view grid, odds, and player stats
+- **Admin View** (`/admin`): Control game state, auto-sync, quarter payouts, collection/payout tracking
+- **TV Display** (`/display`): Full-screen view for projector/TV with live stats
 
 ## API Endpoints
 
@@ -85,6 +93,7 @@ BettingDashboard/
 - `GET /api/game` - Get current game state
 - `POST /api/game/claim` - Claim a square `{ squareIndex, playerName }`
 - `GET /api/game/winner` - Get current potential winner
+- `GET /api/game/stats` - Get player statistics (bets, winnings, net)
 
 ### Admin API
 - `POST /api/admin/reset` - Reset game to initial state

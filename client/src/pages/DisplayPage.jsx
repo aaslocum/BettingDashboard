@@ -3,6 +3,7 @@ import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
+import PlayerStats from '../components/PlayerStats';
 
 function DisplayPage() {
   const { gameData, loading, error } = useGameData(2000); // Faster refresh for display
@@ -50,14 +51,17 @@ function DisplayPage() {
           </div>
         </div>
 
-        {/* Right Side - Scoreboard */}
-        <div className="col-span-3">
+        {/* Right Side - Scoreboard & Stats */}
+        <div className="col-span-3 space-y-4 overflow-y-auto max-h-full">
           <Scoreboard gameData={gameData} displayMode />
 
           {/* Current Winner Preview */}
           {gameData.grid.locked && (
             <CurrentWinnerPreview gameData={gameData} />
           )}
+
+          {/* Player Stats */}
+          <PlayerStats gameData={gameData} displayMode />
         </div>
       </div>
 

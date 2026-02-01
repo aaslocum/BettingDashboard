@@ -5,6 +5,7 @@ import OddsDisplay from '../components/OddsDisplay';
 import Scoreboard from '../components/Scoreboard';
 import ClaimModal from '../components/ClaimModal';
 import WinnersPanel from '../components/WinnersPanel';
+import PlayerStats from '../components/PlayerStats';
 
 function PlayerPage() {
   const { gameData, loading, error, claimSquare } = useGameData(3000);
@@ -68,6 +69,9 @@ function PlayerPage() {
           <WinnersPanel quarters={gameData.quarters} />
         </div>
       </div>
+
+      {/* Player Stats Section */}
+      <PlayerStats gameData={gameData} />
 
       {/* Claim Modal */}
       {selectedSquare !== null && (

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameData } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
+import PlayerStats from '../components/PlayerStats';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
@@ -135,10 +136,15 @@ function AdminPage() {
           />
         </div>
 
-        {/* Right Column - Grid Preview */}
-        <div className="card">
-          <h2 className="text-xl font-bold mb-4 text-yellow-400">Grid Preview</h2>
-          <SquaresGrid gameData={gameData} />
+        {/* Right Column - Grid Preview & Stats */}
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="text-xl font-bold mb-4 text-yellow-400">Grid Preview</h2>
+            <SquaresGrid gameData={gameData} />
+          </div>
+
+          {/* Player Stats with Collection/Payout Info */}
+          <PlayerStats gameData={gameData} showCollectionInfo={true} />
         </div>
       </div>
     </div>

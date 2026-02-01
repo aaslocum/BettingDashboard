@@ -168,3 +168,75 @@ export function markQuarterWinner(quarter) {
 
   return saveGameData(data);
 }
+
+// Get player statistics
+export function getPlayerStats() {
+  const data = getGameData();
+  const { grid, quarters } = data;
+  const { squares } = grid;
+  const COST_PER_SQUARE = 1;
+
+  // Count squares per player
+  const playerSquares = {};
+  squares.forEach((initials, index) => {
+    if (initials) {
+      if (!playerSquares[initials]) {
+        playerSquares[initials] = { squares: [], count: 0 };
+      }
+      playerSquares[initials].squares.push(index);
+      playerSquares[initials].count++;
+    }
+  });
+
+  // Calculate winnings per player
+  const playerWinnings = {};
+  Object.entries(quarters).forEach(([quarterKey, quarter]) => {
+    if (quarter.completed && quarter.winner) {
+      const winner = quarter.winner.player;
+      if (!playerWinnings[winner]) {
+        playerWinnings[winner] = { total: 0, quarters: [] };
+      }
+      playerWinnings[winner].total += quarter.prize;
+      playerWinnings[winner].quarters.push({
+        quarter: quarterKey,
+        prize: quarter.prize
+      });
+    }
+  });
+
+  // Combine stats
+  const allPlayers = new Set([
+    ...Object.keys(playerSquares),
+    ...Object.keys(playerWinnings)
+  ]);
+
+  const players = Array.from(allPlayers).map(initials => {
+    const squareCount = playerSquares[initials]?.count || 0;
+    const betAmount = squareCount * COST_PER_SQUARE;
+    const winnings = playerWinnings[initials]?.total || 0;
+    const net = winnings - betAmount;
+
+    return {
+      initials,
+      squareCount,
+      betAmount,
+      winnings,
+      net,
+      quarterWins: playerWinnings[initials]?.quarters || []
+    };
+  });
+
+  // Sort by net descending
+  players.sort((a, b) => b.net - a.net || b.squareCount - a.squareCount);
+
+  const totals = {
+    totalSquares: squares.filter(s => s !== null).length,
+    totalBets: squares.filter(s => s !== null).length * COST_PER_SQUARE,
+    totalPaidOut: Object.values(quarters)
+      .filter(q => q.completed)
+      .reduce((sum, q) => sum + q.prize, 0),
+    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0)
+  };
+
+  return { players, totals };
+}

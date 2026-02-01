@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, findWinnerForScores } from '../services/dataService.js';
+import { getGameData, claimSquare, findWinnerForScores, getPlayerStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -54,6 +54,17 @@ router.get('/winner', (req, res) => {
     });
   } catch (error) {
     console.error('Error finding winner:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/game/stats - Get player statistics (bets, winnings, net)
+router.get('/stats', (req, res) => {
+  try {
+    const stats = getPlayerStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting player stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
