@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-900 text-white min-h-screen;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors;
+  }
+
+  .card {
+    @apply bg-gray-800 rounded-lg p-4 shadow-lg;
+  }
+
+  .input-field {
+    @apply bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500;
+  }
+}
+
+/* Squares grid styling */
+.squares-grid {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: 2px;
+}
+
+.square {
+  @apply aspect-square flex items-center justify-center text-xs font-semibold cursor-pointer transition-all;
+}
+
+.square:hover:not(.claimed):not(.header) {
+  @apply bg-blue-600;
+}
+
+.square.claimed {
+  @apply bg-green-700 cursor-default;
+}
+
+.square.winner {
+  @apply bg-yellow-500 text-black animate-pulse;
+}
+
+.square.header {
+  @apply bg-gray-700 cursor-default font-bold;
+}
+
+/* TV Display mode optimizations */
+.display-mode {
+  @apply text-2xl;
+}
+
+.display-mode .squares-grid {
+  gap: 3px;
+}
+
+.display-mode .square {
+  @apply text-lg;
+}
+
+/* Odds ticker animation */
+@keyframes ticker {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.odds-ticker {
+  animation: ticker 30s linear infinite;
+}
+
+.odds-ticker:hover {
+  animation-play-state: paused;
+}

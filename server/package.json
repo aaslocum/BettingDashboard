@@ -1,0 +1,16 @@
+{
+  "name": "super-bowl-server",
+  "version": "1.0.0",
+  "description": "Express backend for Super Bowl party app",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  }
+}

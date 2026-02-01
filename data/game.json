@@ -1,0 +1,24 @@
+{
+  "teams": {
+    "home": { "name": "Kansas City Chiefs", "abbreviation": "KC" },
+    "away": { "name": "Philadelphia Eagles", "abbreviation": "PHI" }
+  },
+  "grid": {
+    "locked": false,
+    "squares": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    "homeNumbers": null,
+    "awayNumbers": null
+  },
+  "scores": {
+    "home": 0,
+    "away": 0
+  },
+  "quarters": {
+    "q1": { "completed": false, "winner": null, "prize": 15 },
+    "q2": { "completed": false, "winner": null, "prize": 30 },
+    "q3": { "completed": false, "winner": null, "prize": 15 },
+    "q4": { "completed": false, "winner": null, "prize": 40 }
+  },
+  "gameStatus": "setup",
+  "lastUpdated": "2026-02-01T00:00:00.000Z"
+}
