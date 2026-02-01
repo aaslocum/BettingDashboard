@@ -7,6 +7,13 @@ import {
   lockAndRandomize,
   markQuarterWinner
 } from '../services/dataService.js';
+import {
+  getSyncStatus,
+  startAutoSync,
+  stopAutoSync,
+  manualSync
+} from '../services/syncService.js';
+import { resetMockScores } from '../services/oddsService.js';
 
 const router = Router();
 
@@ -80,6 +87,70 @@ router.post('/quarter', (req, res) => {
   } catch (error) {
     console.error('Error marking quarter:', error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// GET /api/admin/sync/status - Get auto-sync status
+router.get('/sync/status', (req, res) => {
+  try {
+    const status = getSyncStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('Error getting sync status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/sync/start - Start auto-sync
+router.post('/sync/start', (req, res) => {
+  try {
+    const apiKey = process.env.ODDS_API_KEY;
+    const { gameId, interval } = req.body;
+
+    const result = startAutoSync(apiKey, { gameId, interval });
+    const status = getSyncStatus();
+
+    res.json({ ...result, status });
+  } catch (error) {
+    console.error('Error starting sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/sync/stop - Stop auto-sync
+router.post('/sync/stop', (req, res) => {
+  try {
+    const result = stopAutoSync();
+    const status = getSyncStatus();
+
+    res.json({ ...result, status });
+  } catch (error) {
+    console.error('Error stopping sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/sync/now - Trigger manual sync
+router.post('/sync/now', async (req, res) => {
+  try {
+    const apiKey = process.env.ODDS_API_KEY;
+    const status = await manualSync(apiKey);
+
+    res.json({ message: 'Manual sync completed', status });
+  } catch (error) {
+    console.error('Error during manual sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/reset - Reset game to initial state (updated to also reset mock scores)
+router.post('/reset-mock', (req, res) => {
+  try {
+    resetMockScores();
+    res.json({ message: 'Mock scores reset' });
+  } catch (error) {
+    console.error('Error resetting mock scores:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

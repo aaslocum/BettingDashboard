@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameData } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
@@ -6,6 +6,24 @@ import { getQuarterName, formatCurrency } from '../utils/helpers';
 function AdminPage() {
   const { gameData, loading, error, refetch } = useGameData(5000);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [syncStatus, setSyncStatus] = useState(null);
+
+  // Fetch sync status
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/sync/status');
+      const data = await response.json();
+      setSyncStatus(data);
+    } catch (err) {
+      console.error('Failed to fetch sync status:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSyncStatus();
+    const interval = setInterval(fetchSyncStatus, 5000);
+    return () => clearInterval(interval);
+  }, [fetchSyncStatus]);
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -55,23 +73,30 @@ function AdminPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Controls */}
         <div className="space-y-4">
-          {/* Team Setup */}
-          <TeamSetup
-            teams={gameData.teams}
-            onSave={async (teams) => {
-              await apiCall('teams', teams);
-              showMessage('Teams updated');
+          {/* Auto-Sync Control - Primary control for hands-off operation */}
+          <AutoSyncControl
+            syncStatus={syncStatus}
+            onToggle={async (enable) => {
+              try {
+                const endpoint = enable ? 'sync/start' : 'sync/stop';
+                await apiCall(endpoint, {});
+                fetchSyncStatus();
+                showMessage(enable ? 'Auto-sync started' : 'Auto-sync stopped');
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
             }}
-          />
-
-          {/* Score Control */}
-          <ScoreControl
+            onSyncNow={async () => {
+              try {
+                await apiCall('sync/now', {});
+                fetchSyncStatus();
+                showMessage('Manual sync completed');
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
+            teams={gameData.teams}
             scores={gameData.scores}
-            teams={gameData.teams}
-            onUpdate={async (scores) => {
-              await apiCall('scores', scores);
-              showMessage('Scores updated');
-            }}
           />
 
           {/* Grid Lock */}
@@ -120,100 +145,86 @@ function AdminPage() {
   );
 }
 
-function TeamSetup({ teams, onSave }) {
-  const [homeTeam, setHomeTeam] = useState(teams.home);
-  const [awayTeam, setAwayTeam] = useState(teams.away);
+function AutoSyncControl({ syncStatus, onToggle, onSyncNow, teams, scores }) {
+  const isEnabled = syncStatus?.enabled || false;
+  const lastSync = syncStatus?.lastSync;
+  const lastError = syncStatus?.lastError;
+  const useMockData = syncStatus?.useMockData;
 
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4">Team Setup</h2>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Home Team</label>
-          <input
-            type="text"
-            className="input-field w-full mb-2"
-            placeholder="Team name"
-            value={homeTeam.name}
-            onChange={(e) => setHomeTeam({ ...homeTeam, name: e.target.value })}
-          />
-          <input
-            type="text"
-            className="input-field w-full"
-            placeholder="Abbrev (e.g. KC)"
-            maxLength={5}
-            value={homeTeam.abbreviation}
-            onChange={(e) => setHomeTeam({ ...homeTeam, abbreviation: e.target.value })}
-          />
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Live Score Sync</h2>
+        <span className={`px-2 py-1 rounded text-sm ${
+          isEnabled ? 'bg-green-600' : 'bg-gray-600'
+        }`}>
+          {isEnabled ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+
+      {/* Current Status Display */}
+      <div className="bg-gray-700 rounded-lg p-4 mb-4">
+        <div className="text-center mb-3">
+          <div className="text-sm text-gray-400 mb-1">Current Score</div>
+          <div className="text-3xl font-bold">
+            <span className="text-blue-400">{teams.away.abbreviation}</span>
+            <span className="mx-2">{scores.away}</span>
+            <span className="text-gray-500">-</span>
+            <span className="mx-2">{scores.home}</span>
+            <span className="text-red-400">{teams.home.abbreviation}</span>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Away Team</label>
-          <input
-            type="text"
-            className="input-field w-full mb-2"
-            placeholder="Team name"
-            value={awayTeam.name}
-            onChange={(e) => setAwayTeam({ ...awayTeam, name: e.target.value })}
-          />
-          <input
-            type="text"
-            className="input-field w-full"
-            placeholder="Abbrev (e.g. PHI)"
-            maxLength={5}
-            value={awayTeam.abbreviation}
-            onChange={(e) => setAwayTeam({ ...awayTeam, abbreviation: e.target.value })}
-          />
+        <div className="text-center text-sm text-gray-400">
+          {teams.away.name} @ {teams.home.name}
         </div>
       </div>
-      <button
-        onClick={() => onSave({ homeTeam, awayTeam })}
-        className="btn-primary w-full"
-      >
-        Save Teams
-      </button>
-    </div>
-  );
-}
 
-function ScoreControl({ scores, teams, onUpdate }) {
-  const [homeScore, setHomeScore] = useState(scores.home);
-  const [awayScore, setAwayScore] = useState(scores.away);
+      {/* Sync Controls */}
+      <div className="space-y-3">
+        <button
+          onClick={() => onToggle(!isEnabled)}
+          className={`w-full py-3 rounded font-bold transition-colors ${
+            isEnabled
+              ? 'bg-red-600 hover:bg-red-700'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
+        >
+          {isEnabled ? 'Stop Auto-Sync' : 'Start Auto-Sync'}
+        </button>
 
-  return (
-    <div className="card">
-      <h2 className="text-xl font-bold mb-4">Score Control</h2>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            {teams.away.name}
-          </label>
-          <input
-            type="number"
-            className="input-field w-full text-2xl text-center"
-            value={awayScore}
-            min={0}
-            onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            {teams.home.name}
-          </label>
-          <input
-            type="number"
-            className="input-field w-full text-2xl text-center"
-            value={homeScore}
-            min={0}
-            onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
-          />
-        </div>
+        <button
+          onClick={onSyncNow}
+          className="btn-secondary w-full"
+        >
+          Sync Now
+        </button>
       </div>
-      <button
-        onClick={() => onUpdate({ homeScore, awayScore })}
-        className="btn-primary w-full"
-      >
-        Update Scores
-      </button>
+
+      {/* Status Info */}
+      <div className="mt-4 pt-4 border-t border-gray-700 text-sm">
+        {useMockData && (
+          <div className="text-yellow-500 mb-2">
+            Using simulated data (no API key configured)
+          </div>
+        )}
+        {lastSync && (
+          <div className="text-gray-400">
+            Last sync: {new Date(lastSync).toLocaleTimeString()}
+          </div>
+        )}
+        {lastError && (
+          <div className="text-red-400">
+            Error: {lastError}
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="mt-4 p-3 bg-blue-900/30 rounded text-sm text-blue-300">
+        <strong>Hands-off mode:</strong> When enabled, team names and scores
+        update automatically from live data every 10 seconds. You only need
+        to mark quarter winners.
+      </div>
     </div>
   );
 }

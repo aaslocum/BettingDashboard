@@ -14,7 +14,8 @@ BettingDashboard/
 │   │   └── admin.js       # Admin control endpoints
 │   ├── services/
 │   │   ├── oddsService.js # The Odds API integration
-│   │   └── dataService.js # JSON file data persistence
+│   │   ├── dataService.js # JSON file data persistence
+│   │   └── syncService.js # Auto-sync for live scores
 │   └── .env.example       # Environment variables template
 ├── client/                 # React frontend
 │   ├── src/
@@ -63,9 +64,15 @@ BettingDashboard/
   - Q3: $15
   - Final: $40
 
-### 3. Display Modes
+### 3. Auto-Sync (Hands-Off Mode)
+- Automatically fetches team names and live scores from The Odds API
+- Updates every 10 seconds when enabled
+- Falls back to simulated game data when no API key configured
+- Admin only needs to mark quarter winners
+
+### 4. Display Modes
 - **Player View** (`/`): Claim squares, view grid and odds
-- **Admin View** (`/admin`): Control game state, scores, prizes
+- **Admin View** (`/admin`): Control game state, auto-sync, quarter payouts
 - **TV Display** (`/display`): Full-screen view for projector/TV
 
 ## API Endpoints
@@ -85,6 +92,12 @@ BettingDashboard/
 - `POST /api/admin/scores` - Update scores `{ homeScore, awayScore }`
 - `POST /api/admin/lock` - Lock grid and randomize numbers
 - `POST /api/admin/quarter` - Mark quarter winner `{ quarter: 'q1'|'q2'|'q3'|'q4' }`
+
+### Auto-Sync API
+- `GET /api/admin/sync/status` - Get current sync status
+- `POST /api/admin/sync/start` - Start auto-sync `{ gameId?, interval? }`
+- `POST /api/admin/sync/stop` - Stop auto-sync
+- `POST /api/admin/sync/now` - Trigger manual sync
 
 ## Development
 
@@ -122,15 +135,15 @@ npm run dev
 ## Game Flow
 
 1. **Setup Phase**
-   - Admin sets team names
+   - Enable auto-sync to populate team names automatically (or set manually)
    - Players claim squares (100 squares total)
 
 2. **Lock Phase**
    - Admin locks grid when all squares claimed
    - Numbers 0-9 randomly assigned to each axis
 
-3. **Game Phase**
-   - Admin updates scores as game progresses
+3. **Game Phase (Hands-Off)**
+   - Auto-sync updates scores automatically every 10 seconds
    - At end of each quarter, admin marks winner
    - Winner determined by last digit of each team's score
 
