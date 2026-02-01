@@ -14,24 +14,27 @@ router.get('/', (req, res) => {
   }
 });
 
-// POST /api/game/claim - Claim a square
+// POST /api/game/claim - Claim a square with initials
 router.post('/claim', (req, res) => {
   try {
     const { squareIndex, playerName } = req.body;
 
     if (squareIndex === undefined || !playerName) {
-      return res.status(400).json({ error: 'squareIndex and playerName required' });
+      return res.status(400).json({ error: 'squareIndex and initials required' });
     }
 
-    if (playerName.trim().length === 0) {
-      return res.status(400).json({ error: 'Player name cannot be empty' });
+    // Clean and validate initials (2-4 letters only)
+    const initials = playerName.trim().toUpperCase().replace(/[^A-Z]/g, '');
+
+    if (initials.length < 2) {
+      return res.status(400).json({ error: 'Initials must be at least 2 letters' });
     }
 
-    if (playerName.length > 20) {
-      return res.status(400).json({ error: 'Player name too long (max 20 chars)' });
+    if (initials.length > 4) {
+      return res.status(400).json({ error: 'Initials must be at most 4 letters' });
     }
 
-    const data = claimSquare(parseInt(squareIndex), playerName.trim());
+    const data = claimSquare(parseInt(squareIndex), initials);
     res.json(data);
   } catch (error) {
     console.error('Error claiming square:', error);

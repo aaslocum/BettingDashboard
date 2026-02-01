@@ -1,27 +1,40 @@
 import { useState } from 'react';
 
 function ClaimModal({ squareIndex, onClaim, onClose }) {
-  const [playerName, setPlayerName] = useState('');
+  const [initials, setInitials] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleInitialsChange = (e) => {
+    // Auto-uppercase and only allow letters
+    const value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+    setInitials(value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!playerName.trim()) {
-      setError('Please enter your name');
+    const trimmed = initials.trim();
+
+    if (!trimmed) {
+      setError('Please enter your initials');
       return;
     }
 
-    if (playerName.length > 20) {
-      setError('Name must be 20 characters or less');
+    if (trimmed.length < 2) {
+      setError('Enter at least 2 characters');
+      return;
+    }
+
+    if (trimmed.length > 4) {
+      setError('Maximum 4 characters');
       return;
     }
 
     setLoading(true);
     try {
-      await onClaim(squareIndex, playerName.trim());
+      await onClaim(squareIndex, trimmed);
       onClose();
     } catch (err) {
       setError(err.message);
@@ -40,17 +53,20 @@ function ClaimModal({ squareIndex, onClaim, onClose }) {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm text-gray-400 mb-2">
-              Enter Your Name
+              Enter Your Initials (2-4 letters)
             </label>
             <input
               type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="input-field w-full"
-              placeholder="Your name"
-              maxLength={20}
+              value={initials}
+              onChange={handleInitialsChange}
+              className="input-field w-full text-center text-2xl tracking-widest uppercase"
+              placeholder="ABC"
+              maxLength={4}
               autoFocus
             />
+            <p className="text-xs text-gray-500 mt-1 text-center">
+              e.g., JD, ABC, MIKE
+            </p>
           </div>
 
           {error && (
@@ -61,7 +77,7 @@ function ClaimModal({ squareIndex, onClaim, onClose }) {
             <button
               type="submit"
               className="btn-success flex-1"
-              disabled={loading}
+              disabled={loading || initials.length < 2}
             >
               {loading ? 'Claiming...' : 'Claim for $1'}
             </button>

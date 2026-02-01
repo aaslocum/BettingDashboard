@@ -5,18 +5,13 @@ function SquaresGrid({ gameData, onSquareClick, displayMode = false }) {
   const { squares, homeNumbers, awayNumbers, locked } = grid;
 
   const getSquareClass = (index) => {
-    const baseClass = displayMode ? 'square text-sm p-1' : 'square text-xs p-0.5';
+    const baseClass = displayMode ? 'square text-base p-1' : 'square text-xs p-0.5';
     const claimed = squares[index] !== null;
     const isWinner = locked && isWinningSquare(index, homeNumbers, awayNumbers, scores.home, scores.away);
 
     if (isWinner) return `${baseClass} winner`;
     if (claimed) return `${baseClass} claimed`;
     return `${baseClass} bg-gray-600`;
-  };
-
-  const truncateName = (name, maxLen = displayMode ? 8 : 6) => {
-    if (!name) return '';
-    return name.length > maxLen ? name.substring(0, maxLen) : name;
   };
 
   return (
@@ -60,9 +55,9 @@ function SquaresGrid({ gameData, onSquareClick, displayMode = false }) {
                   key={`square-${index}`}
                   className={getSquareClass(index)}
                   onClick={() => !locked && !squares[index] && onSquareClick?.(index)}
-                  title={squares[index] || `Square ${index + 1}`}
+                  title={squares[index] ? `${squares[index]} - Square ${index + 1}` : `Square ${index + 1} - Available`}
                 >
-                  {truncateName(squares[index])}
+                  {squares[index] || ''}
                 </div>
               );
             })}
