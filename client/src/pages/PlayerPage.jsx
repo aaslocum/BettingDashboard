@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useGameData, useOddsData } from '../hooks/useGameData';
+import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
+import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
 import Scoreboard from '../components/Scoreboard';
 import ClaimModal from '../components/ClaimModal';
 import WinnersPanel from '../components/WinnersPanel';
@@ -10,6 +11,7 @@ import PlayerStats from '../components/PlayerStats';
 function PlayerPage() {
   const { gameData, loading, error, claimSquare } = useGameData(3000);
   const { oddsData } = useOddsData(30000);
+  const { propsData } = usePlayerProps(60000);
   const [selectedSquare, setSelectedSquare] = useState(null);
 
   if (loading) {
@@ -48,9 +50,10 @@ function PlayerPage() {
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Odds */}
+        {/* Left Column - Odds & Props */}
         <div className="lg:col-span-1 space-y-4">
           <OddsDisplay oddsData={oddsData} />
+          <PlayerPropsDisplay propsData={propsData} />
         </div>
 
         {/* Center Column - Grid */}

@@ -72,3 +72,31 @@ export function useOddsData(refreshInterval = 30000) {
 
   return { oddsData, loading, error, refetch: fetchData };
 }
+
+export function usePlayerProps(refreshInterval = 60000) {
+  const [propsData, setPropsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/odds/props');
+      if (!response.ok) throw new Error('Failed to fetch player props');
+      const data = await response.json();
+      setPropsData(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, refreshInterval);
+    return () => clearInterval(interval);
+  }, [fetchData, refreshInterval]);
+
+  return { propsData, loading, error, refetch: fetchData };
+}

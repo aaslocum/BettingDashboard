@@ -1,6 +1,7 @@
-import { useGameData, useOddsData } from '../hooks/useGameData';
+import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
+import PlayerPropsDisplay, { PlayerPropsTicker } from '../components/PlayerPropsDisplay';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
@@ -8,6 +9,7 @@ import PlayerStats from '../components/PlayerStats';
 function DisplayPage() {
   const { gameData, loading, error } = useGameData(2000); // Faster refresh for display
   const { oddsData } = useOddsData(15000); // Faster odds refresh
+  const { propsData } = usePlayerProps(30000); // Player props refresh
 
   if (loading) {
     return (
@@ -38,9 +40,10 @@ function DisplayPage() {
 
       {/* Main Content */}
       <div className="grid grid-cols-12 gap-4 h-[calc(100vh-120px)]">
-        {/* Left Side - Odds */}
-        <div className="col-span-3 space-y-4">
+        {/* Left Side - Odds & Props */}
+        <div className="col-span-3 space-y-4 overflow-y-auto max-h-full">
           <OddsDisplay oddsData={oddsData} displayMode />
+          <PlayerPropsDisplay propsData={propsData} displayMode />
           <WinnersPanel quarters={gameData.quarters} displayMode />
         </div>
 
@@ -67,7 +70,7 @@ function DisplayPage() {
 
       {/* Footer Ticker */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 py-2 overflow-hidden">
-        <OddsTicker oddsData={oddsData} />
+        <CombinedTicker oddsData={oddsData} propsData={propsData} />
       </div>
     </div>
   );
@@ -98,42 +101,69 @@ function CurrentWinnerPreview({ gameData }) {
   );
 }
 
-function OddsTicker({ oddsData }) {
-  if (!oddsData?.games?.[0]) {
-    return <div className="text-gray-500 text-center">No odds data</div>;
-  }
-
-  const game = oddsData.games[0];
-  const bookmakers = game.bookmakers || [];
-
+function CombinedTicker({ oddsData, propsData }) {
   const tickerItems = [];
 
-  bookmakers.forEach(bookmaker => {
-    bookmaker.markets?.forEach(market => {
-      if (market.key === 'h2h') {
-        market.outcomes?.forEach(outcome => {
-          const displayOdds = outcome.price > 0 ? `+${outcome.price}` : outcome.price;
-          tickerItems.push(
-            `${outcome.name} ML: ${displayOdds}`
-          );
-        });
-      }
-      if (market.key === 'spreads') {
-        market.outcomes?.forEach(outcome => {
-          const point = outcome.point > 0 ? `+${outcome.point}` : outcome.point;
-          tickerItems.push(
-            `${outcome.name} ${point}`
-          );
-        });
-      }
+  // Add game odds
+  if (oddsData?.games?.[0]) {
+    const game = oddsData.games[0];
+    const bookmakers = game.bookmakers || [];
+
+    bookmakers.forEach(bookmaker => {
+      bookmaker.markets?.forEach(market => {
+        if (market.key === 'h2h') {
+          market.outcomes?.forEach(outcome => {
+            const displayOdds = outcome.price > 0 ? `+${outcome.price}` : outcome.price;
+            tickerItems.push({
+              type: 'odds',
+              text: `${outcome.name} ML: ${displayOdds}`
+            });
+          });
+        }
+        if (market.key === 'spreads') {
+          market.outcomes?.forEach(outcome => {
+            const point = outcome.point > 0 ? `+${outcome.point}` : outcome.point;
+            tickerItems.push({
+              type: 'odds',
+              text: `${outcome.name} ${point}`
+            });
+          });
+        }
+      });
     });
-  });
+  }
+
+  // Add player props (featured ones)
+  if (propsData?.games?.[0]?.props) {
+    const props = propsData.games[0].props;
+    const featured = props.filter(p =>
+      p.market === 'player_anytime_td' ||
+      (p.name === 'Over' && ['player_pass_yds', 'player_rush_yds'].includes(p.market))
+    ).slice(0, 6);
+
+    featured.forEach(prop => {
+      const displayOdds = prop.odds > 0 ? `+${prop.odds}` : prop.odds;
+      const label = prop.market === 'player_anytime_td'
+        ? `${prop.player} TD`
+        : `${prop.player} O${prop.line}`;
+      tickerItems.push({
+        type: 'prop',
+        text: `${label}: ${displayOdds}`
+      });
+    });
+  }
+
+  if (tickerItems.length === 0) {
+    return <div className="text-gray-500 text-center">Loading odds...</div>;
+  }
 
   return (
     <div className="whitespace-nowrap odds-ticker text-lg">
       {tickerItems.map((item, i) => (
         <span key={i} className="mx-8">
-          <span className="text-yellow-400">{item}</span>
+          <span className={item.type === 'prop' ? 'text-green-400' : 'text-yellow-400'}>
+            {item.text}
+          </span>
           {i < tickerItems.length - 1 && <span className="mx-4 text-gray-600">|</span>}
         </span>
       ))}

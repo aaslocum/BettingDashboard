@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { fetchSuperBowlOdds, getMockOdds } from '../services/oddsService.js';
+import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps } from '../services/oddsService.js';
 
 const router = Router();
 
-// GET /api/odds - Fetch current betting odds
+// GET /api/odds - Fetch current betting odds (DraftKings only)
 router.get('/', async (req, res) => {
   try {
     const apiKey = process.env.ODDS_API_KEY;
@@ -26,9 +26,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/odds/props - Fetch player prop odds (DraftKings only)
+router.get('/props', async (req, res) => {
+  try {
+    const apiKey = process.env.ODDS_API_KEY;
+    const { eventId } = req.query;
+
+    // If no API key, return mock data
+    if (!apiKey) {
+      console.log('No ODDS_API_KEY configured, returning mock player props');
+      return res.json(getMockPlayerProps());
+    }
+
+    const props = await fetchPlayerProps(apiKey, eventId);
+    res.json(props);
+  } catch (error) {
+    console.error('Error fetching player props:', error);
+    res.status(500).json({
+      error: error.message,
+      mock: true,
+      ...getMockPlayerProps()
+    });
+  }
+});
+
 // GET /api/odds/mock - Always return mock data (for testing)
 router.get('/mock', (req, res) => {
   res.json(getMockOdds());
+});
+
+// GET /api/odds/props/mock - Always return mock player props (for testing)
+router.get('/props/mock', (req, res) => {
+  res.json(getMockPlayerProps());
 });
 
 export default router;
