@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps } from '../services/oddsService.js';
+import { getTeamStats, getPlayerGameStats } from '../services/statsService.js';
 
 const router = Router();
 
@@ -58,6 +59,28 @@ router.get('/mock', (req, res) => {
 // GET /api/odds/props/mock - Always return mock player props (for testing)
 router.get('/props/mock', (req, res) => {
   res.json(getMockPlayerProps());
+});
+
+// GET /api/odds/team-stats - Get team game statistics
+router.get('/team-stats', (req, res) => {
+  try {
+    const stats = getTeamStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching team stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/odds/player-stats - Get player game statistics
+router.get('/player-stats', (req, res) => {
+  try {
+    const stats = getPlayerGameStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching player stats:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;

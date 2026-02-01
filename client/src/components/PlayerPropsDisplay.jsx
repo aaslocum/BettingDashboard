@@ -5,11 +5,20 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   if (!propsData?.games?.[0]?.props || propsData.games[0].props.length === 0) {
+    if (displayMode) {
+      return (
+        <div className="nbc-panel h-full">
+          <div className="nbc-panel-header">
+            <span className="nbc-header-accent"></span>
+            <h3 className="nbc-panel-title">PLAYER PROPS</h3>
+          </div>
+          <p className="text-gray-400 p-4 text-center text-sm">No player props available</p>
+        </div>
+      );
+    }
     return (
       <div className="card">
-        <h2 className={`${displayMode ? 'text-2xl' : 'text-xl'} font-bold mb-4 text-yellow-400`}>
-          Player Props
-        </h2>
+        <h2 className="text-xl font-bold mb-4 text-yellow-400">Player Props</h2>
         <p className="text-gray-400">No player props available</p>
       </div>
     );
@@ -36,21 +45,75 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
 
   // Category labels
   const categoryLabels = {
-    'all': 'All Props',
-    'player_pass_yds': 'Passing Yards',
-    'player_pass_tds': 'Passing TDs',
-    'player_rush_yds': 'Rushing Yards',
-    'player_receptions': 'Receptions',
-    'player_reception_yds': 'Receiving Yards',
-    'player_anytime_td': 'Anytime TD'
+    'all': 'All',
+    'player_pass_yds': 'Pass Yds',
+    'player_pass_tds': 'Pass TDs',
+    'player_rush_yds': 'Rush Yds',
+    'player_receptions': 'Rec',
+    'player_reception_yds': 'Rec Yds',
+    'player_anytime_td': 'Any TD'
   };
 
+  if (displayMode) {
+    return (
+      <div className="nbc-panel h-full flex flex-col">
+        <div className="nbc-panel-header">
+          <span className="nbc-header-accent"></span>
+          <h3 className="nbc-panel-title">PLAYER PROPS</h3>
+          <span className="ml-auto text-xs text-gray-400">DraftKings</span>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-1 p-2 border-b border-gray-700/50">
+          {categories.slice(0, 5).map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-2 py-1 rounded text-xs font-semibold tracking-wide transition-colors ${
+                selectedCategory === cat
+                  ? 'nbc-tab-active'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {categoryLabels[cat] || cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Props List - NBC Style */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          {Object.entries(groupedByPlayer).slice(0, 4).map(([player, playerProps]) => (
+            <div key={player} className="bg-black/30 rounded p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="nbc-team-badge">
+                  {player.split(' ')[0][0]}.{player.split(' ').pop().slice(0,3).toUpperCase()}
+                </span>
+                <span className="font-semibold text-white text-sm">{player}</span>
+              </div>
+              <div className="space-y-1">
+                {playerProps.slice(0, 2).map((prop, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400">
+                      {prop.line !== null ? `${prop.name} ${prop.line}` : prop.marketName}
+                    </span>
+                    <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
+                      {formatOdds(prop.odds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Regular (non-display) mode
   return (
     <div className="card">
       <div className="flex justify-between items-center mb-4">
-        <h2 className={`${displayMode ? 'text-2xl' : 'text-xl'} font-bold text-yellow-400`}>
-          Player Props
-        </h2>
+        <h2 className="text-xl font-bold text-yellow-400">Player Props</h2>
         <span className="text-xs text-blue-400">via DraftKings</span>
       </div>
 
@@ -78,10 +141,10 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
       </div>
 
       {/* Props List */}
-      <div className={`space-y-3 ${displayMode ? 'max-h-[400px]' : 'max-h-[300px]'} overflow-y-auto`}>
+      <div className="space-y-3 max-h-[300px] overflow-y-auto">
         {Object.entries(groupedByPlayer).map(([player, playerProps]) => (
           <div key={player} className="bg-gray-700 rounded-lg p-3">
-            <div className={`font-semibold text-white mb-2 ${displayMode ? 'text-lg' : 'text-sm'}`}>
+            <div className="font-semibold text-white mb-2 text-sm">
               {player}
             </div>
             <div className="space-y-1">

@@ -2,9 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* NBC NFL Color Palette */
+:root {
+  --nbc-navy: #0a1628;
+  --nbc-navy-light: #142238;
+  --nbc-gold: #d4af37;
+  --nbc-gold-bright: #ffc107;
+  --nbc-silver: #c0c0c0;
+  --nbc-red: #c8102e;
+  --nbc-blue-accent: #1e3a5f;
+}
+
 @layer base {
   body {
     @apply bg-gray-900 text-white min-h-screen;
+    font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
   }
 }
 
@@ -31,6 +43,308 @@
 
   .input-field {
     @apply bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500;
+  }
+
+  /* NBC-Style Panel */
+  .nbc-panel {
+    background: linear-gradient(180deg, var(--nbc-navy-light) 0%, var(--nbc-navy) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .nbc-panel-header {
+    background: linear-gradient(90deg, var(--nbc-navy) 0%, var(--nbc-blue-accent) 100%);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--nbc-gold);
+  }
+
+  .nbc-header-accent {
+    width: 4px;
+    height: 18px;
+    background: var(--nbc-gold);
+    border-radius: 2px;
+  }
+
+  .nbc-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: white;
+    text-transform: uppercase;
+  }
+
+  .nbc-team-header {
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nbc-team-abbr {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: 0.05em;
+  }
+
+  .nbc-team-badge {
+    background: var(--nbc-blue-accent);
+    color: var(--nbc-silver);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Stat Row */
+  .nbc-stat-row {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .nbc-stat-row:last-child {
+    border-bottom: none;
+  }
+
+  .nbc-stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--nbc-silver);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .nbc-stat-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e0e0e0;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .nbc-stat-leader {
+    color: var(--nbc-gold) !important;
+  }
+
+  /* Stat Bar */
+  .nbc-stat-bar {
+    display: flex;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .nbc-stat-bar-away {
+    background: #4a5568;
+    transition: width 0.5s ease;
+  }
+
+  .nbc-stat-bar-home {
+    background: #4a5568;
+    transition: width 0.5s ease;
+  }
+
+  .nbc-bar-leader {
+    background: linear-gradient(90deg, var(--nbc-gold) 0%, #b8962d 100%) !important;
+  }
+
+  /* Tab Styles */
+  .nbc-tab-active {
+    color: var(--nbc-gold);
+    border-bottom: 2px solid var(--nbc-gold);
+    background: rgba(212, 175, 55, 0.1);
+  }
+
+  /* Stat Table */
+  .nbc-stat-table-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    margin-bottom: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--nbc-silver);
+    letter-spacing: 0.1em;
+  }
+
+  .nbc-stat-table-row {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 2px;
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+
+  .nbc-stat-table-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nbc-leader-row {
+    background: rgba(212, 175, 55, 0.1);
+    border-left: 3px solid var(--nbc-gold);
+  }
+
+  .text-nbc-gold {
+    color: var(--nbc-gold);
+  }
+
+  /* NBC Scoreboard */
+  .nbc-scoreboard {
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .nbc-scoreboard-header {
+    background: linear-gradient(90deg, var(--nbc-red) 0%, #a00d24 100%);
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: white;
+    text-transform: uppercase;
+  }
+
+  .nbc-score-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nbc-score-row:last-child {
+    border-bottom: none;
+  }
+
+  .nbc-team-name {
+    flex: 1;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .nbc-score {
+    font-size: 32px;
+    font-weight: 800;
+    color: white;
+    min-width: 60px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* NBC Header/Title */
+  .nbc-main-title {
+    background: linear-gradient(90deg, var(--nbc-navy) 0%, var(--nbc-blue-accent) 50%, var(--nbc-navy) 100%);
+    padding: 12px 24px;
+    border-bottom: 3px solid var(--nbc-gold);
+    text-align: center;
+    position: relative;
+  }
+
+  .nbc-main-title h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  .nbc-main-title::before,
+  .nbc-main-title::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--nbc-gold);
+  }
+
+  .nbc-main-title::before {
+    left: 20px;
+  }
+
+  .nbc-main-title::after {
+    right: 20px;
+  }
+
+  /* NBC Footer Ticker */
+  .nbc-ticker {
+    background: linear-gradient(180deg, #1a1a2e 0%, #0a0a14 100%);
+    border-top: 2px solid var(--nbc-gold);
+  }
+
+  .nbc-ticker-content {
+    padding: 8px 0;
+  }
+
+  /* Winners Panel NBC Style */
+  .nbc-winners-panel {
+    background: linear-gradient(180deg, var(--nbc-navy-light) 0%, var(--nbc-navy) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .nbc-quarter-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .nbc-quarter-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--nbc-silver);
+    width: 70px;
+    letter-spacing: 0.05em;
+  }
+
+  .nbc-quarter-winner {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--nbc-gold);
+  }
+
+  .nbc-quarter-prize {
+    font-size: 12px;
+    color: #4ade80;
+    font-weight: 600;
+  }
+
+  /* Rotating Panel Animation */
+  .panel-fade-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .panel-fade-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .panel-fade-exit {
+    opacity: 1;
+  }
+
+  .panel-fade-exit-active {
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
 }
 
@@ -61,17 +375,48 @@
   @apply bg-gray-700 cursor-default font-bold;
 }
 
-/* TV Display mode optimizations */
+/* NBC Display mode */
 .display-mode {
-  @apply text-2xl;
+  background: linear-gradient(180deg, #0a0f1a 0%, #050810 100%);
 }
 
 .display-mode .squares-grid {
   gap: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .display-mode .square {
-  @apply text-lg;
+  @apply text-base font-bold;
+  border-radius: 2px;
+}
+
+.display-mode .square.header {
+  background: linear-gradient(180deg, var(--nbc-blue-accent) 0%, var(--nbc-navy) 100%);
+  color: var(--nbc-gold);
+  font-size: 14px;
+}
+
+.display-mode .square.claimed {
+  background: linear-gradient(180deg, #1a4d2e 0%, #0f3320 100%);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.display-mode .square.winner {
+  background: linear-gradient(180deg, var(--nbc-gold) 0%, #b8962d 100%);
+  color: #000;
+  animation: winner-pulse 1s ease-in-out infinite;
+}
+
+@keyframes winner-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--nbc-gold);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--nbc-gold), 0 0 40px rgba(212, 175, 55, 0.5);
+  }
 }
 
 /* Odds ticker animation */
@@ -90,4 +435,25 @@
 
 .odds-ticker:hover {
   animation-play-state: paused;
+}
+
+/* Panel rotation indicator */
+.panel-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.panel-dot.active {
+  background: var(--nbc-gold);
+  box-shadow: 0 0 8px var(--nbc-gold);
 }

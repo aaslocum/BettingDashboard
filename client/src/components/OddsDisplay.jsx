@@ -94,69 +94,64 @@ function OddsDisplay({ oddsData, displayMode = false }) {
   );
 }
 
-// TV-optimized display with ticker
+// TV-optimized display with NBC styling
 function OddsDisplayTV({ game, bookmakers }) {
-  // Get the best odds from first bookmaker
   const bookmaker = bookmakers[0];
   const h2h = bookmaker?.markets?.find(m => m.key === 'h2h');
   const spreads = bookmaker?.markets?.find(m => m.key === 'spreads');
   const totals = bookmaker?.markets?.find(m => m.key === 'totals');
 
   return (
-    <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 p-4 rounded-lg">
-      {/* Main matchup */}
-      <div className="text-center mb-4">
-        <div className="text-3xl font-bold text-white">
-          {game.awayTeam}
-          <span className="text-gray-500 mx-4">vs</span>
-          {game.homeTeam}
-        </div>
+    <div className="nbc-panel">
+      <div className="nbc-panel-header">
+        <span className="nbc-header-accent"></span>
+        <h3 className="nbc-panel-title">BETTING ODDS</h3>
+        <span className="ml-auto text-xs text-gray-400">DraftKings</span>
       </div>
 
-      {/* Odds cards */}
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="p-3 space-y-3">
         {/* Moneyline */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-gray-400 text-sm mb-2">MONEYLINE</h3>
-          {h2h?.outcomes?.map((o) => (
-            <div key={o.name} className="flex justify-between items-center py-1">
-              <span className="text-white">{o.name}</span>
-              <span className={`text-xl font-bold ${getOddsColorClass(o.price)}`}>
-                {formatOdds(o.price)}
-              </span>
-            </div>
-          ))}
-        </div>
+        {h2h && (
+          <div className="bg-black/30 rounded p-2">
+            <div className="text-xs text-gray-500 mb-2 tracking-wider">MONEYLINE</div>
+            {h2h.outcomes?.map((o) => (
+              <div key={o.name} className="flex justify-between items-center py-1">
+                <span className="text-sm text-gray-300">{o.name}</span>
+                <span className={`font-bold ${getOddsColorClass(o.price)}`}>
+                  {formatOdds(o.price)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Spread */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-gray-400 text-sm mb-2">SPREAD</h3>
-          {spreads?.outcomes?.map((o) => (
-            <div key={o.name} className="flex justify-between items-center py-1">
-              <span className="text-white">{o.name}</span>
-              <span className="text-xl font-bold text-yellow-400">
-                {o.point > 0 ? '+' : ''}{o.point}
-              </span>
-            </div>
-          ))}
-        </div>
+        {spreads && (
+          <div className="bg-black/30 rounded p-2">
+            <div className="text-xs text-gray-500 mb-2 tracking-wider">SPREAD</div>
+            {spreads.outcomes?.map((o) => (
+              <div key={o.name} className="flex justify-between items-center py-1">
+                <span className="text-sm text-gray-300">{o.name}</span>
+                <span className="font-bold text-nbc-gold">
+                  {o.point > 0 ? '+' : ''}{o.point}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Totals */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-gray-400 text-sm mb-2">TOTAL</h3>
-          {totals?.outcomes?.map((o) => (
-            <div key={o.name} className="flex justify-between items-center py-1">
-              <span className="text-white">{o.name}</span>
-              <span className="text-xl font-bold text-blue-400">
-                {o.point}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="text-center text-gray-500 text-sm mt-2">
-        via {bookmaker?.title || 'Sportsbook'}
+        {totals && (
+          <div className="bg-black/30 rounded p-2">
+            <div className="text-xs text-gray-500 mb-2 tracking-wider">TOTAL</div>
+            {totals.outcomes?.map((o) => (
+              <div key={o.name} className="flex justify-between items-center py-1">
+                <span className="text-sm text-gray-300">{o.name}</span>
+                <span className="font-bold text-blue-400">{o.point}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

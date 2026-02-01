@@ -1,15 +1,30 @@
+import { useState, useEffect } from 'react';
 import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
-import PlayerPropsDisplay, { PlayerPropsTicker } from '../components/PlayerPropsDisplay';
+import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
+import TeamStats from '../components/TeamStats';
+import PlayerGameStats from '../components/PlayerGameStats';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 
+const PANEL_TYPES = ['props', 'teamStats', 'playerStats'];
+const PANEL_DURATION = 10000; // 10 seconds per panel
+
 function DisplayPage() {
-  const { gameData, loading, error } = useGameData(2000); // Faster refresh for display
-  const { oddsData } = useOddsData(15000); // Faster odds refresh
-  const { propsData } = usePlayerProps(30000); // Player props refresh
+  const { gameData, loading, error } = useGameData(2000);
+  const { oddsData } = useOddsData(15000);
+  const { propsData } = usePlayerProps(30000);
+  const [activePanel, setActivePanel] = useState(0);
+
+  // Auto-rotate panels
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActivePanel(prev => (prev + 1) % PANEL_TYPES.length);
+    }, PANEL_DURATION);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -30,47 +45,121 @@ function DisplayPage() {
   if (!gameData) return null;
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 display-mode">
-      {/* Header */}
-      <div className="text-center mb-4">
-        <h1 className="text-4xl font-bold text-yellow-400">
-          SUPER BOWL SQUARES
-        </h1>
+    <div className="min-h-screen p-4 display-mode">
+      {/* NBC-Style Header */}
+      <div className="nbc-main-title mb-4">
+        <h1>SUPER BOWL SQUARES</h1>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-120px)]">
-        {/* Left Side - Odds & Props */}
-        <div className="col-span-3 space-y-4 overflow-y-auto max-h-full">
+      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-140px)]">
+        {/* Left Side - Rotating Panels */}
+        <div className="col-span-3 flex flex-col gap-4 overflow-hidden">
+          {/* Odds Display (always visible) */}
           <OddsDisplay oddsData={oddsData} displayMode />
-          <PlayerPropsDisplay propsData={propsData} displayMode />
+
+          {/* Rotating Panel */}
+          <div className="flex-1 overflow-hidden">
+            <RotatingPanel
+              activePanel={activePanel}
+              propsData={propsData}
+              gameData={gameData}
+            />
+          </div>
+
+          {/* Panel Indicator Dots */}
+          <div className="panel-indicator">
+            {PANEL_TYPES.map((_, idx) => (
+              <button
+                key={idx}
+                className={`panel-dot ${activePanel === idx ? 'active' : ''}`}
+                onClick={() => setActivePanel(idx)}
+              />
+            ))}
+          </div>
+
+          {/* Winners Panel */}
           <WinnersPanel quarters={gameData.quarters} displayMode />
         </div>
 
         {/* Center - Grid */}
         <div className="col-span-6 flex flex-col">
-          <div className="card flex-1 flex flex-col justify-center">
-            <SquaresGrid gameData={gameData} displayMode />
+          <div className="nbc-panel flex-1 flex flex-col">
+            <div className="nbc-panel-header">
+              <span className="nbc-header-accent"></span>
+              <h3 className="nbc-panel-title">SQUARES POOL - $100 POT</h3>
+            </div>
+            <div className="flex-1 p-4 flex items-center justify-center">
+              <SquaresGrid gameData={gameData} displayMode />
+            </div>
           </div>
         </div>
 
         {/* Right Side - Scoreboard & Stats */}
         <div className="col-span-3 space-y-4 overflow-y-auto max-h-full">
-          <Scoreboard gameData={gameData} displayMode />
+          <NBCScoreboard gameData={gameData} />
 
           {/* Current Winner Preview */}
           {gameData.grid.locked && (
             <CurrentWinnerPreview gameData={gameData} />
           )}
 
-          {/* Player Stats */}
+          {/* Player Stats (Squares Pool) */}
           <PlayerStats gameData={gameData} displayMode />
         </div>
       </div>
 
       {/* Footer Ticker */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 py-2 overflow-hidden">
-        <CombinedTicker oddsData={oddsData} propsData={propsData} />
+      <div className="fixed bottom-0 left-0 right-0 nbc-ticker overflow-hidden">
+        <div className="nbc-ticker-content">
+          <CombinedTicker oddsData={oddsData} propsData={propsData} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RotatingPanel({ activePanel, propsData, gameData }) {
+  const panelType = PANEL_TYPES[activePanel];
+
+  return (
+    <div className="h-full transition-opacity duration-300">
+      {panelType === 'props' && (
+        <PlayerPropsDisplay propsData={propsData} displayMode />
+      )}
+      {panelType === 'teamStats' && (
+        <TeamStats gameData={gameData} displayMode />
+      )}
+      {panelType === 'playerStats' && (
+        <PlayerGameStats displayMode />
+      )}
+    </div>
+  );
+}
+
+function NBCScoreboard({ gameData }) {
+  const { teams, scores, quarters } = gameData;
+
+  // Determine game status
+  let gameStatus = 'SUPER BOWL LIX';
+  const completedQuarters = Object.values(quarters).filter(q => q.completed).length;
+  if (completedQuarters > 0 && completedQuarters < 4) {
+    const quarterNames = ['1ST', '2ND', '3RD', '4TH'];
+    gameStatus = `${quarterNames[completedQuarters - 1]} QTR`;
+  } else if (completedQuarters === 4) {
+    gameStatus = 'FINAL';
+  }
+
+  return (
+    <div className="nbc-scoreboard">
+      <div className="nbc-scoreboard-header">{gameStatus}</div>
+      <div className="nbc-score-row">
+        <span className="nbc-team-name">{teams.away.abbreviation}</span>
+        <span className="nbc-score">{scores.away}</span>
+      </div>
+      <div className="nbc-score-row">
+        <span className="nbc-team-name">{teams.home.abbreviation}</span>
+        <span className="nbc-score">{scores.home}</span>
       </div>
     </div>
   );
@@ -89,13 +178,18 @@ function CurrentWinnerPreview({ gameData }) {
   const currentWinner = squares[squareIndex];
 
   return (
-    <div className="card mt-4 text-center bg-gradient-to-r from-yellow-900 to-orange-900">
-      <div className="text-gray-400 text-sm">CURRENT WINNING SQUARE</div>
-      <div className="text-3xl font-bold text-yellow-400 mt-2">
-        {currentWinner || '???'}
+    <div className="nbc-panel">
+      <div className="nbc-panel-header">
+        <span className="nbc-header-accent"></span>
+        <h3 className="nbc-panel-title">WINNING SQUARE</h3>
       </div>
-      <div className="text-sm text-gray-400 mt-1">
-        Score ending: {teams.away.abbreviation} {awayLastDigit} - {teams.home.abbreviation} {homeLastDigit}
+      <div className="p-4 text-center">
+        <div className="text-4xl font-extrabold text-nbc-gold mb-2">
+          {currentWinner || '???'}
+        </div>
+        <div className="text-sm text-gray-400">
+          Score: {teams.away.abbreviation} {awayLastDigit} - {teams.home.abbreviation} {homeLastDigit}
+        </div>
       </div>
     </div>
   );
@@ -161,7 +255,7 @@ function CombinedTicker({ oddsData, propsData }) {
     <div className="whitespace-nowrap odds-ticker text-lg">
       {tickerItems.map((item, i) => (
         <span key={i} className="mx-8">
-          <span className={item.type === 'prop' ? 'text-green-400' : 'text-yellow-400'}>
+          <span className={item.type === 'prop' ? 'text-green-400' : 'text-nbc-gold'}>
             {item.text}
           </span>
           {i < tickerItems.length - 1 && <span className="mx-4 text-gray-600">|</span>}
