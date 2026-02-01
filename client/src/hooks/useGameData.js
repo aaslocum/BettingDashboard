@@ -100,3 +100,59 @@ export function usePlayerProps(refreshInterval = 60000) {
 
   return { propsData, loading, error, refetch: fetchData };
 }
+
+export function useTeamStats(refreshInterval = 15000) {
+  const [teamStats, setTeamStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/odds/team-stats');
+      if (!response.ok) throw new Error('Failed to fetch team stats');
+      const data = await response.json();
+      setTeamStats(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, refreshInterval);
+    return () => clearInterval(interval);
+  }, [fetchData, refreshInterval]);
+
+  return { teamStats, loading, error, refetch: fetchData };
+}
+
+export function usePlayerGameStats(refreshInterval = 15000) {
+  const [playerGameStats, setPlayerGameStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/odds/player-stats');
+      if (!response.ok) throw new Error('Failed to fetch player stats');
+      const data = await response.json();
+      setPlayerGameStats(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, refreshInterval);
+    return () => clearInterval(interval);
+  }, [fetchData, refreshInterval]);
+
+  return { playerGameStats, loading, error, refetch: fetchData };
+}
