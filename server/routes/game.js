@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, findWinnerForScores, getPlayerStats } from '../services/dataService.js';
+import { getGameData, claimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -66,6 +66,23 @@ router.get('/stats', (req, res) => {
   } catch (error) {
     console.error('Error getting player stats:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/game/bulk-claim - Bulk assign remaining squares to participants
+router.post('/bulk-claim', (req, res) => {
+  try {
+    const { initialsList } = req.body;
+
+    if (!initialsList || !Array.isArray(initialsList) || initialsList.length === 0) {
+      return res.status(400).json({ error: 'initialsList array required' });
+    }
+
+    const result = bulkClaimSquares(initialsList);
+    res.json(result);
+  } catch (error) {
+    console.error('Error bulk claiming squares:', error);
+    res.status(400).json({ error: error.message });
   }
 });
 

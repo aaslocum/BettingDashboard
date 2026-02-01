@@ -78,6 +78,75 @@ export function claimSquare(index, playerName) {
   return saveGameData(data);
 }
 
+// Bulk claim squares - distribute remaining squares evenly among participants
+export function bulkClaimSquares(initialsList) {
+  const data = getGameData();
+
+  if (data.grid.locked) {
+    throw new Error('Grid is locked');
+  }
+
+  if (!initialsList || initialsList.length === 0) {
+    throw new Error('No participants provided');
+  }
+
+  // Validate all initials
+  const validatedInitials = initialsList.map(initials => {
+    const cleaned = initials.trim().toUpperCase().replace(/[^A-Z]/g, '');
+    if (cleaned.length < 2 || cleaned.length > 4) {
+      throw new Error(`Invalid initials: ${initials} (must be 2-4 letters)`);
+    }
+    return cleaned;
+  });
+
+  // Find unclaimed squares
+  const unclaimedIndices = [];
+  data.grid.squares.forEach((square, index) => {
+    if (square === null) {
+      unclaimedIndices.push(index);
+    }
+  });
+
+  if (unclaimedIndices.length === 0) {
+    throw new Error('No unclaimed squares available');
+  }
+
+  // Shuffle unclaimed indices for random distribution
+  for (let i = unclaimedIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [unclaimedIndices[i], unclaimedIndices[j]] = [unclaimedIndices[j], unclaimedIndices[i]];
+  }
+
+  // Calculate even distribution
+  const count = validatedInitials.length;
+  const totalSquares = unclaimedIndices.length;
+  const baseSquares = Math.floor(totalSquares / count);
+  const extraSquares = totalSquares % count;
+
+  // Assign squares
+  let squareIdx = 0;
+  const assignments = [];
+
+  validatedInitials.forEach((initials, participantIdx) => {
+    const squaresToAssign = baseSquares + (participantIdx < extraSquares ? 1 : 0);
+
+    for (let i = 0; i < squaresToAssign && squareIdx < totalSquares; i++) {
+      const gridIndex = unclaimedIndices[squareIdx];
+      data.grid.squares[gridIndex] = initials;
+      assignments.push({ initials, squareIndex: gridIndex });
+      squareIdx++;
+    }
+  });
+
+  saveGameData(data);
+
+  return {
+    assignments,
+    totalAssigned: assignments.length,
+    participants: validatedInitials.length
+  };
+}
+
 // Lock grid and randomize numbers
 export function lockAndRandomize() {
   const data = getGameData();

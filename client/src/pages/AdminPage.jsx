@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useGameData } from '../hooks/useGameData';
 import SquaresGrid from '../components/SquaresGrid';
 import PlayerStats from '../components/PlayerStats';
+import BulkAssignModal from '../components/BulkAssignModal';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
   const { gameData, loading, error, refetch } = useGameData(5000);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [syncStatus, setSyncStatus] = useState(null);
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
 
   // Fetch sync status
   const fetchSyncStatus = useCallback(async () => {
@@ -112,6 +114,7 @@ function AdminPage() {
                 showMessage(err.message, 'error');
               }
             }}
+            onBulkAssign={() => setShowBulkAssignModal(true)}
           />
 
           {/* Quarter Controls */}
@@ -147,6 +150,25 @@ function AdminPage() {
           <PlayerStats gameData={gameData} showCollectionInfo={true} />
         </div>
       </div>
+
+      {/* Bulk Assign Modal */}
+      {showBulkAssignModal && (
+        <BulkAssignModal
+          remainingSquares={100 - gameData.grid.squares.filter(s => s !== null).length}
+          onAssign={async (initialsList) => {
+            const response = await fetch('/api/game/bulk-claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ initialsList })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+            refetch();
+            showMessage(`Assigned ${data.totalAssigned} squares to ${data.participants} participants`);
+          }}
+          onClose={() => setShowBulkAssignModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -235,7 +257,9 @@ function AutoSyncControl({ syncStatus, onToggle, onSyncNow, teams, scores }) {
   );
 }
 
-function GridControl({ locked, squaresClaimed, onLock }) {
+function GridControl({ locked, squaresClaimed, onLock, onBulkAssign }) {
+  const remainingSquares = 100 - squaresClaimed;
+
   return (
     <div className="card">
       <h2 className="text-xl font-bold mb-4">Grid Control</h2>
@@ -257,15 +281,19 @@ function GridControl({ locked, squaresClaimed, onLock }) {
         <div className="text-center text-green-400 font-semibold">
           Grid is locked - Numbers randomized
         </div>
+      ) : squaresClaimed < 100 ? (
+        <button
+          onClick={onBulkAssign}
+          className="btn-primary w-full"
+        >
+          Need {remainingSquares} more squares - Click to bulk assign
+        </button>
       ) : (
         <button
           onClick={onLock}
           className="btn-success w-full"
-          disabled={squaresClaimed < 100}
         >
-          {squaresClaimed < 100
-            ? `Need ${100 - squaresClaimed} more squares`
-            : 'Lock Grid & Randomize Numbers'}
+          Lock Grid & Randomize Numbers
         </button>
       )}
     </div>
