@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 import oddsRoutes from './routes/odds.js';
 import gameRoutes from './routes/game.js';
 import adminRoutes from './routes/admin.js';
+import gamesRoutes from './routes/games.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(express.static(join(__dirname, '../client/dist')));
 // API Routes
 app.use('/api/odds', oddsRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/games', gamesRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check

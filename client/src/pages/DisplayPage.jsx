@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
+import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
@@ -8,6 +9,7 @@ import PlayerGameStats from '../components/PlayerGameStats';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
+import { formatCurrency } from '../utils/helpers';
 
 const PANEL_TYPES = ['props', 'teamStats', 'playerStats'];
 const PANEL_DURATION = 10000; // 10 seconds per panel
@@ -34,7 +36,8 @@ function buildGameContext(gameData) {
 }
 
 function DisplayPage() {
-  const { gameData, loading, error } = useGameData(2000);
+  const { currentGameId } = useGameContext();
+  const { gameData, loading, error } = useGameData(2000, currentGameId);
   const { oddsData } = useOddsData(15000);
   const { propsData } = usePlayerProps(30000);
   const [activePanel, setActivePanel] = useState(0);
@@ -69,7 +72,7 @@ function DisplayPage() {
     <div className="min-h-screen p-4 display-mode">
       {/* NBC-Style Header */}
       <div className="nbc-main-title mb-4">
-        <h1>SUPER BOWL SQUARES</h1>
+        <h1>{gameData?.name?.toUpperCase() || 'SUPER BOWL SQUARES'}</h1>
       </div>
 
       {/* Main Content */}
@@ -108,7 +111,7 @@ function DisplayPage() {
           <div className="nbc-panel flex-1 flex flex-col">
             <div className="nbc-panel-header">
               <span className="nbc-header-accent"></span>
-              <h3 className="nbc-panel-title">SQUARES POOL - $100 POT</h3>
+              <h3 className="nbc-panel-title">SQUARES POOL - {formatCurrency(gameData?.totalPool || 100)} POT</h3>
             </div>
             <div className="flex-1 p-4 flex items-center justify-center">
               <SquaresGrid

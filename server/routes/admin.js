@@ -20,7 +20,8 @@ const router = Router();
 // POST /api/admin/reset - Reset game to initial state
 router.post('/reset', (req, res) => {
   try {
-    const data = resetGame();
+    const { gameId } = req.body;
+    const data = resetGame(gameId);
     res.json({ message: 'Game reset successfully', data });
   } catch (error) {
     console.error('Error resetting game:', error);
@@ -31,13 +32,13 @@ router.post('/reset', (req, res) => {
 // POST /api/admin/teams - Update team information
 router.post('/teams', (req, res) => {
   try {
-    const { homeTeam, awayTeam } = req.body;
+    const { homeTeam, awayTeam, gameId } = req.body;
 
     if (!homeTeam || !awayTeam) {
       return res.status(400).json({ error: 'homeTeam and awayTeam required' });
     }
 
-    const data = updateTeams(homeTeam, awayTeam);
+    const data = updateTeams(homeTeam, awayTeam, gameId);
     res.json({ message: 'Teams updated', data });
   } catch (error) {
     console.error('Error updating teams:', error);
@@ -48,13 +49,13 @@ router.post('/teams', (req, res) => {
 // POST /api/admin/scores - Update current scores
 router.post('/scores', (req, res) => {
   try {
-    const { homeScore, awayScore } = req.body;
+    const { homeScore, awayScore, gameId } = req.body;
 
     if (homeScore === undefined || awayScore === undefined) {
       return res.status(400).json({ error: 'homeScore and awayScore required' });
     }
 
-    const data = updateScores(parseInt(homeScore), parseInt(awayScore));
+    const data = updateScores(parseInt(homeScore), parseInt(awayScore), gameId);
     res.json({ message: 'Scores updated', data });
   } catch (error) {
     console.error('Error updating scores:', error);
@@ -65,7 +66,8 @@ router.post('/scores', (req, res) => {
 // POST /api/admin/lock - Lock grid and randomize numbers
 router.post('/lock', (req, res) => {
   try {
-    const data = lockAndRandomize();
+    const { gameId } = req.body;
+    const data = lockAndRandomize(gameId);
     res.json({ message: 'Grid locked and numbers randomized', data });
   } catch (error) {
     console.error('Error locking grid:', error);
@@ -76,13 +78,13 @@ router.post('/lock', (req, res) => {
 // POST /api/admin/quarter - Mark a quarter as complete
 router.post('/quarter', (req, res) => {
   try {
-    const { quarter } = req.body;
+    const { quarter, gameId } = req.body;
 
     if (!quarter || !['q1', 'q2', 'q3', 'q4'].includes(quarter)) {
       return res.status(400).json({ error: 'Valid quarter (q1, q2, q3, q4) required' });
     }
 
-    const data = markQuarterWinner(quarter);
+    const data = markQuarterWinner(quarter, gameId);
     res.json({ message: `Quarter ${quarter} marked complete`, data });
   } catch (error) {
     console.error('Error marking quarter:', error);

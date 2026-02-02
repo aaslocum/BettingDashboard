@@ -1,66 +1,89 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import {
+  getGame,
+  saveGame,
+  getGamesIndex,
+  getDefaultGameId,
+  createGame as createNewGame,
+  migrateExistingGame
+} from './gamesService.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const DATA_FILE = join(__dirname, '../../data/game.json');
-
-// Initialize default game state
-const defaultGameState = {
-  teams: {
-    home: { name: 'Team A', abbreviation: 'TMA' },
-    away: { name: 'Team B', abbreviation: 'TMB' }
-  },
-  grid: {
-    locked: false,
-    squares: Array(100).fill(null), // 10x10 grid, null = unclaimed
-    homeNumbers: null, // Will be array of 0-9 shuffled
-    awayNumbers: null  // Will be array of 0-9 shuffled
-  },
-  scores: {
-    home: 0,
-    away: 0
-  },
-  quarters: {
-    q1: { completed: false, winner: null, prize: 15 },
-    q2: { completed: false, winner: null, prize: 30 }, // Halftime
-    q3: { completed: false, winner: null, prize: 15 },
-    q4: { completed: false, winner: null, prize: 40 }  // Final
-  },
-  gameStatus: 'setup', // setup, active, completed
-  lastUpdated: new Date().toISOString()
-};
-
-// Ensure data file exists
-function ensureDataFile() {
-  if (!existsSync(DATA_FILE)) {
-    writeFileSync(DATA_FILE, JSON.stringify(defaultGameState, null, 2));
+// Initialize - migrate existing game if needed
+let initialized = false;
+function ensureInitialized() {
+  if (!initialized) {
+    migrateExistingGame();
+    initialized = true;
   }
 }
 
+// Get current game ID (from parameter or default)
+function resolveGameId(gameId) {
+  ensureInitialized();
+  if (gameId) return gameId;
+  return getDefaultGameId();
+}
+
 // Read game data
-export function getGameData() {
-  ensureDataFile();
-  const data = readFileSync(DATA_FILE, 'utf-8');
-  return JSON.parse(data);
+export function getGameData(gameId) {
+  const resolvedId = resolveGameId(gameId);
+  return getGame(resolvedId);
 }
 
 // Write game data
 export function saveGameData(data) {
-  data.lastUpdated = new Date().toISOString();
-  writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  return data;
+  return saveGame(data);
 }
 
 // Reset game to default state
-export function resetGame() {
-  return saveGameData({ ...defaultGameState });
+export function resetGame(gameId) {
+  const resolvedId = resolveGameId(gameId);
+  const gameData = getGame(resolvedId);
+
+  // Keep the id, name, and betAmount, reset everything else
+  const prizes = calculatePrizes(gameData.betAmount);
+
+  const resetData = {
+    ...gameData,
+    teams: {
+      home: { name: 'Team A', abbreviation: 'TMA' },
+      away: { name: 'Team B', abbreviation: 'TMB' }
+    },
+    grid: {
+      locked: false,
+      squares: Array(100).fill(null),
+      homeNumbers: null,
+      awayNumbers: null
+    },
+    scores: {
+      home: 0,
+      away: 0
+    },
+    quarters: {
+      q1: { completed: false, winner: null, prize: prizes.q1 },
+      q2: { completed: false, winner: null, prize: prizes.q2 },
+      q3: { completed: false, winner: null, prize: prizes.q3 },
+      q4: { completed: false, winner: null, prize: prizes.q4 }
+    },
+    gameStatus: 'setup'
+  };
+
+  return saveGame(resetData);
+}
+
+// Calculate prizes based on bet amount
+function calculatePrizes(betAmount) {
+  const totalPool = betAmount * 100;
+  return {
+    q1: Math.round(totalPool * 0.15),
+    q2: Math.round(totalPool * 0.30),
+    q3: Math.round(totalPool * 0.15),
+    q4: Math.round(totalPool * 0.40)
+  };
 }
 
 // Claim a square
-export function claimSquare(index, playerName) {
-  const data = getGameData();
+export function claimSquare(index, playerName, gameId) {
+  const data = getGameData(gameId);
 
   if (data.grid.locked) {
     throw new Error('Grid is locked');
@@ -79,8 +102,8 @@ export function claimSquare(index, playerName) {
 }
 
 // Bulk claim squares - distribute remaining squares evenly among participants
-export function bulkClaimSquares(initialsList) {
-  const data = getGameData();
+export function bulkClaimSquares(initialsList, gameId) {
+  const data = getGameData(gameId);
 
   if (data.grid.locked) {
     throw new Error('Grid is locked');
@@ -148,8 +171,8 @@ export function bulkClaimSquares(initialsList) {
 }
 
 // Lock grid and randomize numbers
-export function lockAndRandomize() {
-  const data = getGameData();
+export function lockAndRandomize(gameId) {
+  const data = getGameData(gameId);
 
   // Check all squares are claimed
   const unclaimedCount = data.grid.squares.filter(s => s === null).length;
@@ -176,24 +199,24 @@ export function lockAndRandomize() {
 }
 
 // Update teams
-export function updateTeams(homeTeam, awayTeam) {
-  const data = getGameData();
+export function updateTeams(homeTeam, awayTeam, gameId) {
+  const data = getGameData(gameId);
   data.teams.home = homeTeam;
   data.teams.away = awayTeam;
   return saveGameData(data);
 }
 
 // Update scores
-export function updateScores(homeScore, awayScore) {
-  const data = getGameData();
+export function updateScores(homeScore, awayScore, gameId) {
+  const data = getGameData(gameId);
   data.scores.home = homeScore;
   data.scores.away = awayScore;
   return saveGameData(data);
 }
 
 // Find winner for current scores
-export function findWinnerForScores(homeScore, awayScore) {
-  const data = getGameData();
+export function findWinnerForScores(homeScore, awayScore, gameId) {
+  const data = getGameData(gameId);
 
   if (!data.grid.locked || !data.grid.homeNumbers || !data.grid.awayNumbers) {
     return null;
@@ -215,9 +238,9 @@ export function findWinnerForScores(homeScore, awayScore) {
 }
 
 // Mark quarter winner
-export function markQuarterWinner(quarter) {
-  const data = getGameData();
-  const winner = findWinnerForScores(data.scores.home, data.scores.away);
+export function markQuarterWinner(quarter, gameId) {
+  const data = getGameData(gameId);
+  const winner = findWinnerForScores(data.scores.home, data.scores.away, gameId);
 
   if (!winner) {
     throw new Error('Cannot determine winner - grid not locked');
@@ -239,11 +262,10 @@ export function markQuarterWinner(quarter) {
 }
 
 // Get player statistics
-export function getPlayerStats() {
-  const data = getGameData();
-  const { grid, quarters } = data;
+export function getPlayerStats(gameId) {
+  const data = getGameData(gameId);
+  const { grid, quarters, betAmount = 1 } = data;
   const { squares } = grid;
-  const COST_PER_SQUARE = 1;
 
   // Count squares per player
   const playerSquares = {};
@@ -281,14 +303,14 @@ export function getPlayerStats() {
 
   const players = Array.from(allPlayers).map(initials => {
     const squareCount = playerSquares[initials]?.count || 0;
-    const betAmount = squareCount * COST_PER_SQUARE;
+    const betAmountTotal = squareCount * betAmount;
     const winnings = playerWinnings[initials]?.total || 0;
-    const net = winnings - betAmount;
+    const net = winnings - betAmountTotal;
 
     return {
       initials,
       squareCount,
-      betAmount,
+      betAmount: betAmountTotal,
       winnings,
       net,
       quarterWins: playerWinnings[initials]?.quarters || []
@@ -300,12 +322,16 @@ export function getPlayerStats() {
 
   const totals = {
     totalSquares: squares.filter(s => s !== null).length,
-    totalBets: squares.filter(s => s !== null).length * COST_PER_SQUARE,
+    totalBets: squares.filter(s => s !== null).length * betAmount,
     totalPaidOut: Object.values(quarters)
       .filter(q => q.completed)
       .reduce((sum, q) => sum + q.prize, 0),
-    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0)
+    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0),
+    betAmountPerSquare: betAmount
   };
 
   return { players, totals };
 }
+
+// Export for backwards compatibility
+export { getGamesIndex, getDefaultGameId } from './gamesService.js';

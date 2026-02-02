@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export function useGameData(refreshInterval = 5000) {
+export function useGameData(refreshInterval = 5000, gameId = null) {
   const [gameData, setGameData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await fetch('/api/game');
+      const url = gameId ? `/api/game?gameId=${gameId}` : '/api/game';
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch game data');
       const data = await response.json();
       setGameData(data);
@@ -17,7 +18,7 @@ export function useGameData(refreshInterval = 5000) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [gameId]);
 
   useEffect(() => {
     fetchData();
@@ -29,7 +30,7 @@ export function useGameData(refreshInterval = 5000) {
     const response = await fetch('/api/game/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ squareIndex, playerName })
+      body: JSON.stringify({ squareIndex, playerName, gameId })
     });
 
     if (!response.ok) {

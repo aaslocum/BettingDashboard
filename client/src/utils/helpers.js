@@ -59,9 +59,9 @@ export function isWinningSquare(index, homeNumbers, awayNumbers, homeScore, away
 
 // Calculate player statistics from game data
 export function calculatePlayerStats(gameData) {
-  const { grid, quarters } = gameData;
+  const { grid, quarters, betAmount = 1 } = gameData;
   const { squares } = grid;
-  const COST_PER_SQUARE = 1; // $1 per square
+  const costPerSquare = betAmount;
 
   // Count squares per player
   const playerSquares = {};
@@ -99,14 +99,14 @@ export function calculatePlayerStats(gameData) {
 
   const stats = Array.from(allPlayers).map(initials => {
     const squareCount = playerSquares[initials]?.count || 0;
-    const betAmount = squareCount * COST_PER_SQUARE;
+    const playerBetAmount = squareCount * costPerSquare;
     const winnings = playerWinnings[initials]?.total || 0;
-    const net = winnings - betAmount;
+    const net = winnings - playerBetAmount;
 
     return {
       initials,
       squareCount,
-      betAmount,
+      betAmount: playerBetAmount,
       winnings,
       net,
       quarterWins: playerWinnings[initials]?.quarters || [],
@@ -123,11 +123,12 @@ export function calculatePlayerStats(gameData) {
   // Calculate totals
   const totals = {
     totalSquares: squares.filter(s => s !== null).length,
-    totalBets: squares.filter(s => s !== null).length * COST_PER_SQUARE,
+    totalBets: squares.filter(s => s !== null).length * costPerSquare,
     totalPaidOut: Object.values(quarters)
       .filter(q => q.completed)
       .reduce((sum, q) => sum + q.prize, 0),
-    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0)
+    totalPrizePool: Object.values(quarters).reduce((sum, q) => sum + q.prize, 0),
+    betAmountPerSquare: costPerSquare
   };
 
   return { players: stats, totals };

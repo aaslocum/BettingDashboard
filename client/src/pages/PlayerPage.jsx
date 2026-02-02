@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameData, useOddsData, usePlayerProps, useTeamStats, usePlayerGameStats } from '../hooks/useGameData';
+import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
@@ -7,6 +8,7 @@ import Scoreboard from '../components/Scoreboard';
 import ClaimModal from '../components/ClaimModal';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
+import { formatCurrency } from '../utils/helpers';
 
 // Build game context for likelihood calculations
 function buildGameContext(gameData) {
@@ -30,7 +32,8 @@ function buildGameContext(gameData) {
 }
 
 function PlayerPage() {
-  const { gameData, loading, error, claimSquare } = useGameData(3000);
+  const { currentGameId, currentGame } = useGameContext();
+  const { gameData, loading, error, claimSquare } = useGameData(3000, currentGameId);
   const { oddsData } = useOddsData(30000);
   const { propsData } = usePlayerProps(60000);
   const { teamStats } = useTeamStats(15000);
@@ -71,8 +74,13 @@ function PlayerPage() {
       {/* Header */}
       <header className="text-center py-2">
         <h1 className="text-2xl md:text-3xl font-bold text-yellow-400">
-          Super Bowl Squares
+          {gameData?.name || 'Super Bowl Squares'}
         </h1>
+        {gameData?.betAmount && (
+          <p className="text-sm text-gray-400 mt-1">
+            {formatCurrency(gameData.betAmount)}/square · {formatCurrency(gameData.totalPool)} pool
+          </p>
+        )}
       </header>
 
       {/* Scoreboard - Compact for mobile */}

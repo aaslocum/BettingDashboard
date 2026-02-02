@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameData } from '../hooks/useGameData';
+import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import PlayerStats from '../components/PlayerStats';
 import BulkAssignModal from '../components/BulkAssignModal';
+import GameSelector from '../components/GameSelector';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
-  const { gameData, loading, error, refetch } = useGameData(5000);
+  const { currentGameId, currentGame, deleteGame, updateGame, games } = useGameContext();
+  const { gameData, loading, error, refetch } = useGameData(5000, currentGameId);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [syncStatus, setSyncStatus] = useState(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
@@ -38,7 +41,7 @@ function AdminPage() {
       const response = await fetch(`/api/admin/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ ...body, gameId: currentGameId })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
@@ -64,6 +67,12 @@ function AdminPage() {
       <h1 className="text-3xl font-bold text-center text-yellow-400">
         Admin Controls
       </h1>
+      {gameData && (
+        <p className="text-center text-gray-400">
+          Managing: <span className="text-white font-semibold">{gameData.name}</span>
+          {' · '}{formatCurrency(gameData.betAmount)}/square · {formatCurrency(gameData.totalPool)} pool
+        </p>
+      )}
 
       {message.text && (
         <div className={`card text-center ${
@@ -76,6 +85,31 @@ function AdminPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Controls */}
         <div className="space-y-4">
+          {/* Game Management */}
+          <GameSettingsControl
+            gameData={gameData}
+            games={games}
+            onUpdate={async (settings) => {
+              try {
+                await updateGame(currentGameId, settings);
+                refetch();
+                showMessage('Game settings updated');
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
+            onDelete={async () => {
+              if (confirm('Are you sure you want to delete this party? This cannot be undone.')) {
+                try {
+                  await deleteGame(currentGameId);
+                  showMessage('Party deleted');
+                } catch (err) {
+                  showMessage(err.message, 'error');
+                }
+              }
+            }}
+          />
+
           {/* Auto-Sync Control - Primary control for hands-off operation */}
           <AutoSyncControl
             syncStatus={syncStatus}
@@ -187,7 +221,7 @@ function AdminPage() {
             const response = await fetch('/api/game/bulk-claim', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ initialsList })
+              body: JSON.stringify({ initialsList, gameId: currentGameId })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
@@ -196,6 +230,112 @@ function AdminPage() {
           }}
           onClose={() => setShowBulkAssignModal(false)}
         />
+      )}
+    </div>
+  );
+}
+
+function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(gameData?.name || '');
+  const [betAmount, setBetAmount] = useState(gameData?.betAmount || 1);
+
+  useEffect(() => {
+    setName(gameData?.name || '');
+    setBetAmount(gameData?.betAmount || 1);
+  }, [gameData]);
+
+  const handleSave = async () => {
+    await onUpdate({ name, betAmount });
+    setIsEditing(false);
+  };
+
+  const canDelete = games.length > 1;
+  const canEditBetAmount = !gameData?.grid?.locked;
+
+  return (
+    <div className="card">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Party Settings</h2>
+        {!isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            Edit
+          </button>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Party Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              Cost Per Square
+              {!canEditBetAmount && (
+                <span className="text-yellow-500 ml-2">(locked)</span>
+              )}
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">$</span>
+              <input
+                type="number"
+                value={betAmount}
+                onChange={(e) => setBetAmount(parseFloat(e.target.value) || 0)}
+                disabled={!canEditBetAmount}
+                min="0.01"
+                step="0.01"
+                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
+              />
+            </div>
+            {!canEditBetAmount && (
+              <p className="text-xs text-yellow-500 mt-1">
+                Cannot change bet amount after grid is locked
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="btn-success flex-1">
+              Save
+            </button>
+            <button onClick={() => setIsEditing(false)} className="btn-secondary flex-1">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Party Name:</span>
+            <span className="text-white font-semibold">{gameData?.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Cost Per Square:</span>
+            <span className="text-white">{formatCurrency(gameData?.betAmount || 1)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Total Pool:</span>
+            <span className="text-green-400 font-semibold">{formatCurrency(gameData?.totalPool || 100)}</span>
+          </div>
+        </div>
+      )}
+
+      {canDelete && !isEditing && (
+        <button
+          onClick={onDelete}
+          className="w-full mt-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
+        >
+          Delete This Party
+        </button>
       )}
     </div>
   );

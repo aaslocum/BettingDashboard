@@ -1,9 +1,11 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { GameProvider } from './context/GameContext';
+import GameSelector from './components/GameSelector';
 import PlayerPage from './pages/PlayerPage';
 import AdminPage from './pages/AdminPage';
 import DisplayPage from './pages/DisplayPage';
 
-function App() {
+function AppContent() {
   const location = useLocation();
   const isDisplayMode = location.pathname === '/display';
 
@@ -53,6 +55,8 @@ function App() {
                 </Link>
               </div>
             </div>
+            {/* Game Selector in Nav */}
+            <GameSelector compact showCreateButton={location.pathname === '/admin'} />
           </div>
         </div>
       </nav>
@@ -66,6 +70,14 @@ function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <GameProvider>
+      <AppContent />
+    </GameProvider>
   );
 }
 

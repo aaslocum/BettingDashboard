@@ -6,7 +6,8 @@ const router = Router();
 // GET /api/game - Get current game state
 router.get('/', (req, res) => {
   try {
-    const data = getGameData();
+    const gameId = req.query.gameId;
+    const data = getGameData(gameId);
     res.json(data);
   } catch (error) {
     console.error('Error getting game data:', error);
@@ -17,7 +18,7 @@ router.get('/', (req, res) => {
 // POST /api/game/claim - Claim a square with initials
 router.post('/claim', (req, res) => {
   try {
-    const { squareIndex, playerName } = req.body;
+    const { squareIndex, playerName, gameId } = req.body;
 
     if (squareIndex === undefined || !playerName) {
       return res.status(400).json({ error: 'squareIndex and initials required' });
@@ -34,7 +35,7 @@ router.post('/claim', (req, res) => {
       return res.status(400).json({ error: 'Initials must be at most 4 letters' });
     }
 
-    const data = claimSquare(parseInt(squareIndex), initials);
+    const data = claimSquare(parseInt(squareIndex), initials, gameId);
     res.json(data);
   } catch (error) {
     console.error('Error claiming square:', error);
@@ -45,8 +46,9 @@ router.post('/claim', (req, res) => {
 // GET /api/game/winner - Get current potential winner based on scores
 router.get('/winner', (req, res) => {
   try {
-    const data = getGameData();
-    const winner = findWinnerForScores(data.scores.home, data.scores.away);
+    const gameId = req.query.gameId;
+    const data = getGameData(gameId);
+    const winner = findWinnerForScores(data.scores.home, data.scores.away, gameId);
     res.json({
       winner,
       scores: data.scores,
@@ -61,7 +63,8 @@ router.get('/winner', (req, res) => {
 // GET /api/game/stats - Get player statistics (bets, winnings, net)
 router.get('/stats', (req, res) => {
   try {
-    const stats = getPlayerStats();
+    const gameId = req.query.gameId;
+    const stats = getPlayerStats(gameId);
     res.json(stats);
   } catch (error) {
     console.error('Error getting player stats:', error);
@@ -72,13 +75,13 @@ router.get('/stats', (req, res) => {
 // POST /api/game/bulk-claim - Bulk assign remaining squares to participants
 router.post('/bulk-claim', (req, res) => {
   try {
-    const { initialsList } = req.body;
+    const { initialsList, gameId } = req.body;
 
     if (!initialsList || !Array.isArray(initialsList) || initialsList.length === 0) {
       return res.status(400).json({ error: 'initialsList array required' });
     }
 
-    const result = bulkClaimSquares(initialsList);
+    const result = bulkClaimSquares(initialsList, gameId);
     res.json(result);
   } catch (error) {
     console.error('Error bulk claiming squares:', error);
