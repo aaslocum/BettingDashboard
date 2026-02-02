@@ -235,23 +235,49 @@ function AdminPage() {
   );
 }
 
+const DEFAULT_DISTRIBUTION = { q1: 0.15, q2: 0.30, q3: 0.15, q4: 0.40 };
+
 function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(gameData?.name || '');
   const [betAmount, setBetAmount] = useState(gameData?.betAmount || 1);
+  const [distribution, setDistribution] = useState(() => {
+    const d = gameData?.prizeDistribution || DEFAULT_DISTRIBUTION;
+    return { q1: d.q1 * 100, q2: d.q2 * 100, q3: d.q3 * 100, q4: d.q4 * 100 };
+  });
 
   useEffect(() => {
     setName(gameData?.name || '');
     setBetAmount(gameData?.betAmount || 1);
+    const d = gameData?.prizeDistribution || DEFAULT_DISTRIBUTION;
+    setDistribution({ q1: d.q1 * 100, q2: d.q2 * 100, q3: d.q3 * 100, q4: d.q4 * 100 });
   }, [gameData]);
 
+  const distributionTotal = distribution.q1 + distribution.q2 + distribution.q3 + distribution.q4;
+  const isValidDistribution = Math.abs(distributionTotal - 100) < 0.01;
+
+  const handleDistributionChange = (quarter, value) => {
+    const numValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+    setDistribution(prev => ({ ...prev, [quarter]: numValue }));
+  };
+
   const handleSave = async () => {
-    await onUpdate({ name, betAmount });
+    const updates = { name, betAmount };
+    if (!gameData?.grid?.locked) {
+      updates.prizeDistribution = {
+        q1: distribution.q1 / 100,
+        q2: distribution.q2 / 100,
+        q3: distribution.q3 / 100,
+        q4: distribution.q4 / 100
+      };
+    }
+    await onUpdate(updates);
     setIsEditing(false);
   };
 
   const canDelete = games.length > 1;
-  const canEditBetAmount = !gameData?.grid?.locked;
+  const canEditFinancials = !gameData?.grid?.locked;
+  const totalPool = (gameData?.betAmount || 1) * 100;
 
   return (
     <div className="card">
@@ -281,7 +307,7 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
           <div>
             <label className="block text-sm text-gray-400 mb-1">
               Cost Per Square
-              {!canEditBetAmount && (
+              {!canEditFinancials && (
                 <span className="text-yellow-500 ml-2">(locked)</span>
               )}
             </label>
@@ -291,20 +317,63 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
                 type="number"
                 value={betAmount}
                 onChange={(e) => setBetAmount(parseFloat(e.target.value) || 0)}
-                disabled={!canEditBetAmount}
+                disabled={!canEditFinancials}
                 min="0.01"
                 step="0.01"
                 className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
               />
             </div>
-            {!canEditBetAmount && (
+          </div>
+
+          {/* Prize Distribution */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              Prize Distribution
+              {!canEditFinancials && (
+                <span className="text-yellow-500 ml-2">(locked)</span>
+              )}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: 'q1', label: 'Q1' },
+                { key: 'q2', label: 'Halftime' },
+                { key: 'q3', label: 'Q3' },
+                { key: 'q4', label: 'Final' },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 w-16">{label}</label>
+                  <input
+                    type="number"
+                    value={distribution[key]}
+                    onChange={(e) => handleDistributionChange(key, e.target.value)}
+                    disabled={!canEditFinancials}
+                    min="0"
+                    max="100"
+                    step="1"
+                    className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm disabled:opacity-50"
+                  />
+                  <span className="text-gray-500 text-xs">%</span>
+                </div>
+              ))}
+            </div>
+            <div className={`mt-2 text-xs text-center py-1 rounded ${
+              isValidDistribution ? 'text-green-400' : 'text-red-400 bg-red-900/30'
+            }`}>
+              Total: {distributionTotal}% {!isValidDistribution && '(must equal 100%)'}
+            </div>
+            {!canEditFinancials && (
               <p className="text-xs text-yellow-500 mt-1">
-                Cannot change bet amount after grid is locked
+                Cannot change after grid is locked
               </p>
             )}
           </div>
+
           <div className="flex gap-2">
-            <button onClick={handleSave} className="btn-success flex-1">
+            <button
+              onClick={handleSave}
+              disabled={!isValidDistribution}
+              className="btn-success flex-1 disabled:opacity-50"
+            >
               Save
             </button>
             <button onClick={() => setIsEditing(false)} className="btn-secondary flex-1">
@@ -325,6 +394,27 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
           <div className="flex justify-between">
             <span className="text-gray-400">Total Pool:</span>
             <span className="text-green-400 font-semibold">{formatCurrency(gameData?.totalPool || 100)}</span>
+          </div>
+          <div className="pt-2 mt-2 border-t border-gray-700">
+            <div className="text-gray-400 mb-1">Prize Distribution:</div>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Q1:</span>
+                <span className="text-white">{formatCurrency(gameData?.quarters?.q1?.prize || totalPool * 0.15)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Half:</span>
+                <span className="text-white">{formatCurrency(gameData?.quarters?.q2?.prize || totalPool * 0.30)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Q3:</span>
+                <span className="text-white">{formatCurrency(gameData?.quarters?.q3?.prize || totalPool * 0.15)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Final:</span>
+                <span className="text-white">{formatCurrency(gameData?.quarters?.q4?.prize || totalPool * 0.40)}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

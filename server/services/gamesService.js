@@ -22,14 +22,50 @@ const DEFAULT_PRIZE_DISTRIBUTION = {
   q4: 0.40   // 40% (Final)
 };
 
-// Calculate prizes based on bet amount
-function calculatePrizes(betAmount) {
+// Validate prize distribution (must sum to 1.0 or 100%)
+function validatePrizeDistribution(distribution) {
+  const { q1, q2, q3, q4 } = distribution;
+
+  // Check all values are present and valid
+  if (typeof q1 !== 'number' || typeof q2 !== 'number' ||
+      typeof q3 !== 'number' || typeof q4 !== 'number') {
+    throw new Error('All quarter percentages must be numbers');
+  }
+
+  if (q1 < 0 || q2 < 0 || q3 < 0 || q4 < 0) {
+    throw new Error('Quarter percentages cannot be negative');
+  }
+
+  // Normalize if given as percentages (0-100) instead of decimals (0-1)
+  let normalized = { q1, q2, q3, q4 };
+  const sum = q1 + q2 + q3 + q4;
+
+  if (sum > 4) {
+    // Assume percentages, convert to decimals
+    normalized = {
+      q1: q1 / 100,
+      q2: q2 / 100,
+      q3: q3 / 100,
+      q4: q4 / 100
+    };
+  }
+
+  const normalizedSum = normalized.q1 + normalized.q2 + normalized.q3 + normalized.q4;
+  if (Math.abs(normalizedSum - 1) > 0.01) {
+    throw new Error(`Prize percentages must sum to 100% (currently ${Math.round(normalizedSum * 100)}%)`);
+  }
+
+  return normalized;
+}
+
+// Calculate prizes based on bet amount and distribution
+function calculatePrizes(betAmount, distribution = DEFAULT_PRIZE_DISTRIBUTION) {
   const totalPool = betAmount * 100; // 100 squares
   return {
-    q1: Math.round(totalPool * DEFAULT_PRIZE_DISTRIBUTION.q1),
-    q2: Math.round(totalPool * DEFAULT_PRIZE_DISTRIBUTION.q2),
-    q3: Math.round(totalPool * DEFAULT_PRIZE_DISTRIBUTION.q3),
-    q4: Math.round(totalPool * DEFAULT_PRIZE_DISTRIBUTION.q4)
+    q1: Math.round(totalPool * distribution.q1),
+    q2: Math.round(totalPool * distribution.q2),
+    q3: Math.round(totalPool * distribution.q3),
+    q4: Math.round(totalPool * distribution.q4)
   };
 }
 
@@ -38,16 +74,19 @@ function createDefaultGameState(options = {}) {
   const {
     name = 'Super Bowl Party',
     betAmount = 1,
+    prizeDistribution = DEFAULT_PRIZE_DISTRIBUTION,
     id = generateGameId()
   } = options;
 
-  const prizes = calculatePrizes(betAmount);
+  const validatedDistribution = validatePrizeDistribution(prizeDistribution);
+  const prizes = calculatePrizes(betAmount, validatedDistribution);
 
   return {
     id,
     name,
     betAmount,
     totalPool: betAmount * 100,
+    prizeDistribution: validatedDistribution,
     teams: {
       home: { name: 'Team A', abbreviation: 'TMA' },
       away: { name: 'Team B', abbreviation: 'TMB' }
@@ -160,7 +199,7 @@ export function saveGame(gameData) {
 
 // Create a new game
 export function createGame(options = {}) {
-  const { name, betAmount = 1 } = options;
+  const { name, betAmount = 1, prizeDistribution } = options;
 
   if (!name || name.trim().length === 0) {
     throw new Error('Game name is required');
@@ -172,7 +211,8 @@ export function createGame(options = {}) {
 
   const gameData = createDefaultGameState({
     name: name.trim(),
-    betAmount: parseFloat(betAmount)
+    betAmount: parseFloat(betAmount),
+    prizeDistribution: prizeDistribution || DEFAULT_PRIZE_DISTRIBUTION
   });
 
   return saveGame(gameData);
@@ -231,13 +271,17 @@ export function getDefaultGameId() {
   return index.defaultGameId;
 }
 
-// Update game settings (name, bet amount)
+// Update game settings (name, bet amount, prize distribution)
 export function updateGameSettings(gameId, settings) {
   const gameData = getGame(gameId);
 
   if (settings.name !== undefined) {
     gameData.name = settings.name.trim();
   }
+
+  // Track if we need to recalculate prizes
+  let recalculatePrizes = false;
+  let newDistribution = gameData.prizeDistribution || DEFAULT_PRIZE_DISTRIBUTION;
 
   if (settings.betAmount !== undefined) {
     if (gameData.grid.locked) {
@@ -251,9 +295,22 @@ export function updateGameSettings(gameId, settings) {
 
     gameData.betAmount = newBetAmount;
     gameData.totalPool = newBetAmount * 100;
+    recalculatePrizes = true;
+  }
 
-    // Recalculate prizes
-    const prizes = calculatePrizes(newBetAmount);
+  if (settings.prizeDistribution !== undefined) {
+    if (gameData.grid.locked) {
+      throw new Error('Cannot change prize distribution after grid is locked');
+    }
+
+    newDistribution = validatePrizeDistribution(settings.prizeDistribution);
+    gameData.prizeDistribution = newDistribution;
+    recalculatePrizes = true;
+  }
+
+  // Recalculate prizes if bet amount or distribution changed
+  if (recalculatePrizes) {
+    const prizes = calculatePrizes(gameData.betAmount, newDistribution);
     gameData.quarters.q1.prize = prizes.q1;
     gameData.quarters.q2.prize = prizes.q2;
     gameData.quarters.q3.prize = prizes.q3;

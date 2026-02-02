@@ -34,13 +34,22 @@ export function saveGameData(data) {
   return saveGame(data);
 }
 
+// Default prize distribution
+const DEFAULT_PRIZE_DISTRIBUTION = {
+  q1: 0.15,
+  q2: 0.30,
+  q3: 0.15,
+  q4: 0.40
+};
+
 // Reset game to default state
 export function resetGame(gameId) {
   const resolvedId = resolveGameId(gameId);
   const gameData = getGame(resolvedId);
 
-  // Keep the id, name, and betAmount, reset everything else
-  const prizes = calculatePrizes(gameData.betAmount);
+  // Keep the id, name, betAmount, and prizeDistribution, reset everything else
+  const distribution = gameData.prizeDistribution || DEFAULT_PRIZE_DISTRIBUTION;
+  const prizes = calculatePrizes(gameData.betAmount, distribution);
 
   const resetData = {
     ...gameData,
@@ -70,14 +79,14 @@ export function resetGame(gameId) {
   return saveGame(resetData);
 }
 
-// Calculate prizes based on bet amount
-function calculatePrizes(betAmount) {
+// Calculate prizes based on bet amount and distribution
+function calculatePrizes(betAmount, distribution = DEFAULT_PRIZE_DISTRIBUTION) {
   const totalPool = betAmount * 100;
   return {
-    q1: Math.round(totalPool * 0.15),
-    q2: Math.round(totalPool * 0.30),
-    q3: Math.round(totalPool * 0.15),
-    q4: Math.round(totalPool * 0.40)
+    q1: Math.round(totalPool * distribution.q1),
+    q2: Math.round(totalPool * distribution.q2),
+    q3: Math.round(totalPool * distribution.q3),
+    q4: Math.round(totalPool * distribution.q4)
   };
 }
 

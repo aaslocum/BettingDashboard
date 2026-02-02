@@ -37,12 +37,17 @@ export function GameProvider({ children }) {
   }, [fetchGames]);
 
   // Create a new game
-  const createGame = async (name, betAmount) => {
+  const createGame = async (name, betAmount, prizeDistribution = null) => {
     try {
+      const body = { name, betAmount };
+      if (prizeDistribution) {
+        body.prizeDistribution = prizeDistribution;
+      }
+
       const response = await fetch('/api/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, betAmount })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
