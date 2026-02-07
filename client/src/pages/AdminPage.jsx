@@ -64,11 +64,11 @@ function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-center text-yellow-400">
+      <h1 className="text-xl sm:text-2xl font-extrabold text-center tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>
         Admin Controls
       </h1>
       {gameData && (
-        <p className="text-center text-gray-400">
+        <p className="text-center text-xs sm:text-sm text-gray-500 tracking-wide">
           Managing: <span className="text-white font-semibold">{gameData.name}</span>
           {' · '}{formatCurrency(gameData.betAmount)}/square · {formatCurrency(gameData.totalPool)} pool
         </p>
@@ -194,7 +194,7 @@ function AdminPage() {
         <div className="space-y-4">
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-yellow-400">Grid Preview</h2>
+              <h2 className="text-sm font-bold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>Grid Preview</h2>
               {gameData.grid.locked && (
                 <span className="text-sm text-gray-400">
                   Showing likelihood colors
@@ -282,7 +282,7 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
   return (
     <div className="card">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Party Settings</h2>
+        <h2 className="text-sm font-bold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>Party Settings</h2>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
@@ -440,7 +440,7 @@ function AutoSyncControl({ syncStatus, onToggle, onSyncNow, teams, scores }) {
   return (
     <div className="card">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Live Score Sync</h2>
+        <h2 className="text-sm font-bold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>Live Score Sync</h2>
         <span className={`px-2 py-1 rounded text-sm ${
           isEnabled ? 'bg-green-600' : 'bg-gray-600'
         }`}>
@@ -520,7 +520,7 @@ function GridControl({ locked, squaresClaimed, onLock, onBulkAssign }) {
 
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4">Grid Control</h2>
+      <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>Grid Control</h2>
       <div className="mb-4">
         <div className="flex justify-between text-sm">
           <span>Squares claimed:</span>
@@ -562,7 +562,7 @@ function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
   if (!gridLocked) {
     return (
       <div className="card">
-        <h2 className="text-xl font-bold mb-4">Quarter Payouts</h2>
+        <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>Quarter Payouts</h2>
         <p className="text-gray-400">Lock the grid first to enable quarter payouts</p>
       </div>
     );
@@ -570,7 +570,7 @@ function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
 
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4">Quarter Payouts</h2>
+      <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>Quarter Payouts</h2>
       <p className="text-sm text-gray-400 mb-4">
         Current score: {scores.away} - {scores.home} (Last digits: {scores.away % 10} - {scores.home % 10})
       </p>
@@ -600,7 +600,7 @@ function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
 function ResetControl({ onReset }) {
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4">Danger Zone</h2>
+      <h2 className="text-sm font-bold tracking-wider uppercase mb-4 text-red-400">Danger Zone</h2>
       <button onClick={onReset} className="btn-danger w-full">
         Reset Entire Game
       </button>
@@ -650,9 +650,9 @@ function DemoScoreControl({ teams, scores, onUpdateScores, gridLocked }) {
   ];
 
   return (
-    <div className="card border-2 border-yellow-500/50">
+    <div className="card" style={{ borderColor: 'rgba(212, 175, 55, 0.4)' }}>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-yellow-400">Demo Score Controls</h2>
+        <h2 className="text-sm font-bold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>Demo Score Controls</h2>
         <span className="px-2 py-1 rounded text-sm bg-yellow-600">
           Testing Mode
         </span>

@@ -14,55 +14,42 @@ function AppContent() {
     return <DisplayPage />;
   }
 
+  const navLinks = [
+    { to: '/', label: 'Play' },
+    { to: '/admin', label: 'Admin' },
+    { to: '/display', label: 'TV' },
+  ];
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen nbc-app-bg">
       {/* Navigation */}
-      <nav className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <span className="text-xl font-bold text-yellow-400">Super Bowl Party</span>
-              <div className="flex space-x-2">
-                <Link
-                  to="/"
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    location.pathname === '/'
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  Play
-                </Link>
-                <Link
-                  to="/admin"
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    location.pathname === '/admin'
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  Admin
-                </Link>
-                <Link
-                  to="/display"
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    location.pathname === '/display'
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  TV Display
-                </Link>
+      <nav className="nbc-nav">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-12 sm:h-14">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <span className="text-sm sm:text-lg font-extrabold tracking-widest nbc-nav-title">
+                <span className="hidden sm:inline">SUPER BOWL PARTY</span>
+                <span className="sm:hidden">SB PARTY</span>
+              </span>
+              <div className="flex gap-0.5">
+                {navLinks.map(({ to, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`nbc-nav-link ${location.pathname === to ? 'nbc-nav-link-active' : ''}`}
+                  >
+                    {label}
+                  </Link>
+                ))}
               </div>
             </div>
-            {/* Game Selector in Nav */}
             <GameSelector compact showCreateButton={location.pathname === '/admin'} />
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Routes>
           <Route path="/" element={<PlayerPage />} />
           <Route path="/admin" element={<AdminPage />} />

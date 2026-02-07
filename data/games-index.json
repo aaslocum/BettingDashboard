@@ -5,10 +5,10 @@
       "name": "Super Bowl Party",
       "betAmount": 1,
       "totalPool": 100,
-      "gameStatus": "setup",
-      "squaresClaimed": 0,
+      "gameStatus": "active",
+      "squaresClaimed": 100,
       "createdAt": "2026-02-06T22:58:00.594Z",
-      "lastUpdated": "2026-02-06T22:58:00.596Z"
+      "lastUpdated": "2026-02-07T00:13:05.870Z"
     }
   ],
   "defaultGameId": "game_1770418680595_396jsv7w4"

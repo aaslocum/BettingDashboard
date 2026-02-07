@@ -70,28 +70,31 @@ function PlayerPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-8">
+    <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 pb-8">
       {/* Header */}
       <header className="text-center py-2">
-        <h1 className="text-2xl md:text-3xl font-bold text-yellow-400">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>
           {gameData?.name || 'Super Bowl Squares'}
         </h1>
         {gameData?.betAmount && (
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 tracking-wide">
             {formatCurrency(gameData.betAmount)}/square · {formatCurrency(gameData.totalPool)} pool
           </p>
         )}
       </header>
 
-      {/* Scoreboard - Compact for mobile */}
+      {/* Scoreboard */}
       <Scoreboard gameData={gameData} />
 
       {/* Squares Grid */}
       <section className="card">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-bold text-yellow-400">Squares Pool</h2>
-          <span className="text-sm text-gray-400">
-            {gameData.grid.squares.filter(s => s !== null).length}/100 claimed
+          <h2 className="nbc-section-header mb-0 pb-0 border-0">
+            <span className="card-header-accent"></span>
+            SQUARES POOL
+          </h2>
+          <span className="text-xs text-gray-500 font-semibold tracking-wide">
+            {gameData.grid.squares.filter(s => s !== null).length}/100
           </span>
         </div>
         <SquaresGrid
@@ -101,7 +104,7 @@ function PlayerPage() {
           gameContext={buildGameContext(gameData)}
         />
         {!gameData.grid.locked && (
-          <p className="text-center text-sm text-gray-400 mt-3">
+          <p className="text-center text-xs text-gray-500 mt-3">
             Tap an empty square to claim it
           </p>
         )}
@@ -158,21 +161,26 @@ function MobileTeamStats({ teamStats, gameData }) {
   return (
     <section className="card">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-bold text-yellow-400">Team Stats</h2>
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          TEAM STATS
+        </h2>
         {teamStats.source && (
-          <span className="text-xs text-gray-500">via {teamStats.source === 'espn' ? 'ESPN' : 'Demo'}</span>
+          <span className="text-[10px] text-gray-600 font-semibold tracking-wider uppercase">
+            {teamStats.source === 'espn' ? 'ESPN' : 'DEMO'}
+          </span>
         )}
       </div>
 
       {/* Team Headers */}
-      <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-        <div className="font-bold text-sm">{teams.away.abbreviation}</div>
-        <div className="text-xs text-gray-500">VS</div>
-        <div className="font-bold text-sm">{teams.home.abbreviation}</div>
+      <div className="grid grid-cols-3 gap-2 mb-3 text-center py-2 rounded" style={{ background: 'rgba(0,0,0,0.25)' }}>
+        <div className="font-bold text-xs tracking-wider" style={{ color: 'var(--nbc-silver)' }}>{teams.away.abbreviation}</div>
+        <div className="text-[10px] text-gray-600 self-center">VS</div>
+        <div className="font-bold text-xs tracking-wider" style={{ color: 'var(--nbc-silver)' }}>{teams.home.abbreviation}</div>
       </div>
 
       {/* Stats Rows */}
-      <div className="space-y-2">
+      <div>
         {stats.map((stat) => {
           const homeNum = typeof stat.home === 'number' ? stat.home : parseInt(stat.home) || 0;
           const awayNum = typeof stat.away === 'number' ? stat.away : parseInt(stat.away) || 0;
@@ -180,12 +188,12 @@ function MobileTeamStats({ teamStats, gameData }) {
           const awayLeads = stat.invertHighlight ? awayNum < homeNum : awayNum > homeNum;
 
           return (
-            <div key={stat.label} className="grid grid-cols-3 gap-2 text-center py-2 border-b border-gray-700/50">
-              <div className={`text-sm ${awayLeads ? 'text-yellow-400 font-bold' : 'text-gray-300'}`}>
+            <div key={stat.label} className="grid grid-cols-3 gap-2 text-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div className={`text-sm font-semibold ${awayLeads ? 'text-nbc-gold' : 'text-gray-400'}`}>
                 {stat.away ?? '-'}
               </div>
-              <div className="text-xs text-gray-500 self-center">{stat.label}</div>
-              <div className={`text-sm ${homeLeads ? 'text-yellow-400 font-bold' : 'text-gray-300'}`}>
+              <div className="text-[10px] text-gray-600 self-center uppercase tracking-wide">{stat.label}</div>
+              <div className={`text-sm font-semibold ${homeLeads ? 'text-nbc-gold' : 'text-gray-400'}`}>
                 {stat.home ?? '-'}
               </div>
             </div>
@@ -205,34 +213,39 @@ function MobilePlayerGameStats({ playerGameStats }) {
   return (
     <section className="card">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-bold text-yellow-400">Player Stats</h2>
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          PLAYER STATS
+        </h2>
         {playerGameStats.source && (
-          <span className="text-xs text-gray-500">via {playerGameStats.source === 'espn' ? 'ESPN' : 'Demo'}</span>
+          <span className="text-[10px] text-gray-600 font-semibold tracking-wider uppercase">
+            {playerGameStats.source === 'espn' ? 'ESPN' : 'DEMO'}
+          </span>
         )}
       </div>
 
       {/* Passing */}
       {passing && passing.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wide">Passing</h3>
-          <div className="bg-gray-700/50 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-12 gap-1 text-xs text-gray-500 px-3 py-2 border-b border-gray-600">
-              <span className="col-span-4">Player</span>
+          <h3 className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Passing</h3>
+          <div className="rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="grid grid-cols-12 gap-1 text-[10px] text-gray-600 px-3 py-1.5 font-semibold tracking-wider" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="col-span-4">PLAYER</span>
               <span className="col-span-2 text-center">C/A</span>
               <span className="col-span-2 text-center">YDS</span>
               <span className="col-span-2 text-center">TD</span>
               <span className="col-span-2 text-center">INT</span>
             </div>
             {passing.map((player, idx) => (
-              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-sm ${idx === 0 ? 'bg-yellow-900/20' : ''}`}>
+              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-xs sm:text-sm ${idx === 0 ? 'nbc-leader-row' : ''}`}>
                 <div className="col-span-4 truncate">
-                  <span className="text-xs text-gray-500 mr-1">{player.team}</span>
-                  <span className="font-medium">{player.name}</span>
+                  <span className="text-[10px] text-gray-600 mr-1">{player.team}</span>
+                  <span className="font-semibold">{player.name}</span>
                 </div>
-                <span className="col-span-2 text-center text-gray-400">{player.comp}/{player.att}</span>
+                <span className="col-span-2 text-center text-gray-500">{player.comp}/{player.att}</span>
                 <span className="col-span-2 text-center font-bold">{player.yards}</span>
-                <span className="col-span-2 text-center text-green-400">{player.td}</span>
-                <span className="col-span-2 text-center text-red-400">{player.int || 0}</span>
+                <span className="col-span-2 text-center text-green-400 font-semibold">{player.td}</span>
+                <span className="col-span-2 text-center text-red-400 font-semibold">{player.int || 0}</span>
               </div>
             ))}
           </div>
@@ -242,25 +255,25 @@ function MobilePlayerGameStats({ playerGameStats }) {
       {/* Rushing */}
       {rushing && rushing.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wide">Rushing</h3>
-          <div className="bg-gray-700/50 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-12 gap-1 text-xs text-gray-500 px-3 py-2 border-b border-gray-600">
-              <span className="col-span-4">Player</span>
+          <h3 className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Rushing</h3>
+          <div className="rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="grid grid-cols-12 gap-1 text-[10px] text-gray-600 px-3 py-1.5 font-semibold tracking-wider" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="col-span-4">PLAYER</span>
               <span className="col-span-2 text-center">CAR</span>
               <span className="col-span-2 text-center">YDS</span>
               <span className="col-span-2 text-center">AVG</span>
               <span className="col-span-2 text-center">TD</span>
             </div>
             {rushing.slice(0, 5).map((player, idx) => (
-              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-sm ${idx === 0 ? 'bg-yellow-900/20' : ''}`}>
+              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-xs sm:text-sm ${idx === 0 ? 'nbc-leader-row' : ''}`}>
                 <div className="col-span-4 truncate">
-                  <span className="text-xs text-gray-500 mr-1">{player.team}</span>
-                  <span className="font-medium">{player.name}</span>
+                  <span className="text-[10px] text-gray-600 mr-1">{player.team}</span>
+                  <span className="font-semibold">{player.name}</span>
                 </div>
-                <span className="col-span-2 text-center text-gray-400">{player.carries}</span>
+                <span className="col-span-2 text-center text-gray-500">{player.carries}</span>
                 <span className="col-span-2 text-center font-bold">{player.yards}</span>
-                <span className="col-span-2 text-center text-gray-400">{player.avg}</span>
-                <span className="col-span-2 text-center text-green-400">{player.td}</span>
+                <span className="col-span-2 text-center text-gray-500">{player.avg}</span>
+                <span className="col-span-2 text-center text-green-400 font-semibold">{player.td}</span>
               </div>
             ))}
           </div>
@@ -270,25 +283,25 @@ function MobilePlayerGameStats({ playerGameStats }) {
       {/* Receiving */}
       {receiving && receiving.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wide">Receiving</h3>
-          <div className="bg-gray-700/50 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-12 gap-1 text-xs text-gray-500 px-3 py-2 border-b border-gray-600">
-              <span className="col-span-4">Player</span>
+          <h3 className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Receiving</h3>
+          <div className="rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="grid grid-cols-12 gap-1 text-[10px] text-gray-600 px-3 py-1.5 font-semibold tracking-wider" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="col-span-4">PLAYER</span>
               <span className="col-span-2 text-center">REC</span>
               <span className="col-span-2 text-center">YDS</span>
               <span className="col-span-2 text-center">AVG</span>
               <span className="col-span-2 text-center">TD</span>
             </div>
             {receiving.slice(0, 5).map((player, idx) => (
-              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-sm ${idx === 0 ? 'bg-yellow-900/20' : ''}`}>
+              <div key={player.name} className={`grid grid-cols-12 gap-1 px-3 py-2 text-xs sm:text-sm ${idx === 0 ? 'nbc-leader-row' : ''}`}>
                 <div className="col-span-4 truncate">
-                  <span className="text-xs text-gray-500 mr-1">{player.team}</span>
-                  <span className="font-medium">{player.name}</span>
+                  <span className="text-[10px] text-gray-600 mr-1">{player.team}</span>
+                  <span className="font-semibold">{player.name}</span>
                 </div>
-                <span className="col-span-2 text-center text-gray-400">{player.rec}</span>
+                <span className="col-span-2 text-center text-gray-500">{player.rec}</span>
                 <span className="col-span-2 text-center font-bold">{player.yards}</span>
-                <span className="col-span-2 text-center text-gray-400">{player.avg}</span>
-                <span className="col-span-2 text-center text-green-400">{player.td}</span>
+                <span className="col-span-2 text-center text-gray-500">{player.avg}</span>
+                <span className="col-span-2 text-center text-green-400 font-semibold">{player.td}</span>
               </div>
             ))}
           </div>

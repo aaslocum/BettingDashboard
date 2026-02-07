@@ -15,28 +15,30 @@ function WinnersPanel({ quarters, displayMode = false }) {
 
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4 text-yellow-400">
-        Winners
+      <h2 className="nbc-section-header mb-0 pb-0 border-0">
+        <span className="card-header-accent"></span>
+        QUARTER WINNERS
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-2 mt-3">
         {completedQuarters.map(([key, quarter]) => (
           <div
             key={key}
-            className="bg-gradient-to-r from-yellow-900 to-green-900 rounded-lg p-4 flex justify-between items-center"
+            className="rounded p-3 flex justify-between items-center"
+            style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(22,101,52,0.2) 100%)' }}
           >
             <div>
-              <div className="text-sm text-gray-300">
+              <div className="text-[10px] text-gray-500 font-semibold tracking-wider">
                 {getQuarterName(key)}
               </div>
-              <div className="text-xl font-bold text-white">
+              <div className="text-base font-bold text-white">
                 {quarter.winner.player}
               </div>
-              <div className="text-sm text-gray-400">
+              <div className="text-xs text-gray-500">
                 Score: {quarter.winner.awayScore} - {quarter.winner.homeScore}
               </div>
             </div>
-            <div className="text-2xl font-bold text-green-400">
+            <div className="text-xl font-bold text-green-400">
               {formatCurrency(quarter.prize)}
             </div>
           </div>
@@ -44,9 +46,9 @@ function WinnersPanel({ quarters, displayMode = false }) {
       </div>
 
       {/* Total won */}
-      <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
-        <span className="text-gray-400">Total Awarded</span>
-        <span className="text-xl font-bold text-green-400">
+      <div className="mt-3 pt-3 flex justify-between items-center" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <span className="text-[10px] text-gray-500 font-semibold tracking-wider">TOTAL AWARDED</span>
+        <span className="text-lg font-bold text-green-400">
           {formatCurrency(completedQuarters.reduce((sum, [_, q]) => sum + q.prize, 0))}
         </span>
       </div>

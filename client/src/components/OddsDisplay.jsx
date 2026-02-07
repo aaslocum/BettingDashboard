@@ -24,27 +24,30 @@ function OddsDisplay({ oddsData, displayMode = false }) {
 
   return (
     <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-yellow-400">Game Odds</h2>
-        <span className="text-xs text-blue-400">via DraftKings</span>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          BETTING ODDS
+        </h2>
+        <span className="text-[10px] text-gray-600 font-semibold tracking-wider">DRAFTKINGS</span>
       </div>
 
-      <div className="text-center mb-4">
-        <span className="text-lg font-bold">{game.awayTeam}</span>
-        <span className="text-gray-400 mx-2">@</span>
-        <span className="text-lg font-bold">{game.homeTeam}</span>
+      <div className="text-center mb-3">
+        <span className="text-sm font-bold">{game.awayTeam}</span>
+        <span className="text-gray-600 mx-2 text-xs">@</span>
+        <span className="text-sm font-bold">{game.homeTeam}</span>
       </div>
 
       {oddsData.mock && (
-        <div className="text-center text-yellow-500 text-xs mb-3">
-          (Demo data - Add ODDS_API_KEY for live odds)
+        <div className="text-center text-xs mb-3" style={{ color: 'var(--nbc-gold)' }}>
+          Demo data - Add ODDS_API_KEY for live odds
         </div>
       )}
 
       {/* Moneyline */}
       {h2h && (
-        <div className="bg-gray-700 rounded-lg p-3 mb-2">
-          <div className="text-xs text-gray-400 mb-2">MONEYLINE</div>
+        <div className="rounded p-3 mb-2" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">MONEYLINE</div>
           <div className="flex justify-around">
             {h2h.outcomes?.map((o) => (
               <div key={o.name} className="text-center">
@@ -61,12 +64,12 @@ function OddsDisplay({ oddsData, displayMode = false }) {
       {/* Spread & Total side by side */}
       <div className="grid grid-cols-2 gap-2">
         {spreads && (
-          <div className="bg-gray-700 rounded-lg p-3">
-            <div className="text-xs text-gray-400 mb-2">SPREAD</div>
+          <div className="rounded p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">SPREAD</div>
             {spreads.outcomes?.map((o) => (
               <div key={o.name} className="flex justify-between text-sm mb-1">
                 <span className="text-gray-300 truncate">{o.name.split(' ').pop()}</span>
-                <span className="text-yellow-400 font-bold">
+                <span className="font-bold" style={{ color: 'var(--nbc-gold)' }}>
                   {o.point > 0 ? '+' : ''}{o.point}
                 </span>
               </div>
@@ -75,8 +78,8 @@ function OddsDisplay({ oddsData, displayMode = false }) {
         )}
 
         {totals && (
-          <div className="bg-gray-700 rounded-lg p-3">
-            <div className="text-xs text-gray-400 mb-2">TOTAL</div>
+          <div className="rounded p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
+            <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">TOTAL</div>
             {totals.outcomes?.map((o) => (
               <div key={o.name} className="flex justify-between text-sm mb-1">
                 <span className="text-gray-300">{o.name}</span>

@@ -22,27 +22,55 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors;
+    @apply text-white font-bold py-2 px-4 rounded transition-colors;
+    background: linear-gradient(180deg, var(--nbc-blue-accent) 0%, #152a45 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #264a73 0%, var(--nbc-blue-accent) 100%);
+    border-color: var(--nbc-gold);
   }
 
   .btn-secondary {
-    @apply bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors;
+    @apply text-white font-bold py-2 px-4 rounded transition-colors;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
   .btn-danger {
     @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors;
+    border: 1px solid rgba(200, 16, 46, 0.5);
   }
 
   .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors;
+    @apply text-white font-bold py-2 px-4 rounded transition-colors;
+    background: linear-gradient(180deg, #1a6b35 0%, #0f4422 100%);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+  }
+  .btn-success:hover {
+    background: linear-gradient(180deg, #1f8040 0%, #1a6b35 100%);
+    border-color: rgba(74, 222, 128, 0.5);
   }
 
   .card {
-    @apply bg-gray-800 rounded-lg p-4 shadow-lg;
+    background: linear-gradient(180deg, var(--nbc-navy-light) 0%, var(--nbc-navy) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 4px;
+    padding: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 
   .input-field {
-    @apply bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500;
+    @apply rounded px-3 py-2 text-white focus:outline-none;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .input-field:focus {
+    border-color: var(--nbc-gold);
   }
 
   /* NBC-Style Panel */
@@ -373,6 +401,92 @@
 
 .square.header {
   @apply bg-gray-700 cursor-default font-bold;
+}
+
+/* NBC App Background (shared across all pages) */
+.nbc-app-bg {
+  background: linear-gradient(180deg, #0a0f1a 0%, #050810 100%);
+  min-height: 100vh;
+}
+
+/* NBC Navigation */
+.nbc-nav {
+  background: linear-gradient(90deg, var(--nbc-navy) 0%, var(--nbc-blue-accent) 50%, var(--nbc-navy) 100%);
+  border-bottom: 2px solid var(--nbc-gold);
+}
+
+.nbc-nav-title {
+  color: var(--nbc-gold);
+}
+
+.nbc-nav-link {
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  transition: color 0.2s, background 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.nbc-nav-link:hover {
+  color: white;
+}
+
+.nbc-nav-link-active {
+  color: var(--nbc-gold) !important;
+  background: rgba(212, 175, 55, 0.1);
+  border-bottom-color: var(--nbc-gold);
+}
+
+/* Section Header (reusable for player/admin pages) */
+.nbc-section-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nbc-gold);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* Card header accent bar */
+.card-header-accent {
+  width: 3px;
+  height: 16px;
+  background: var(--nbc-gold);
+  border-radius: 1px;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Form inputs themed */
+.nbc-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  padding: 8px 12px;
+  color: white;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.nbc-input:focus {
+  outline: none;
+  border-color: var(--nbc-gold);
+}
+
+.nbc-input:disabled {
+  opacity: 0.5;
+}
+
+/* Subtle row divider */
+.nbc-divider {
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 /* NBC Display mode */

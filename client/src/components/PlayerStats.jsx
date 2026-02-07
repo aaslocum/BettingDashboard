@@ -21,8 +21,11 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
     }
     return (
       <div className="card">
-        <h2 className="text-xl font-bold mb-4 text-yellow-400">Player Stats</h2>
-        <p className="text-gray-400">No squares claimed yet</p>
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          POOL STANDINGS
+        </h2>
+        <p className="text-gray-400 mt-3">No squares claimed yet</p>
       </div>
     );
   }
@@ -104,25 +107,28 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
   // Regular (non-display) mode
   return (
     <div className="card">
-      <h2 className="text-xl font-bold mb-4 text-yellow-400">Player Stats</h2>
+      <h2 className="nbc-section-header mb-0 pb-0 border-0">
+        <span className="card-header-accent"></span>
+        POOL STANDINGS
+      </h2>
 
       {/* Summary Bar */}
-      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-        <div className="bg-gray-700 rounded p-2">
-          <div className="text-xs text-gray-400">Collected</div>
+      <div className="grid grid-cols-3 gap-2 mt-3 mb-3 text-center">
+        <div className="rounded p-2" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="text-[10px] text-gray-500 font-semibold tracking-wider">COLLECTED</div>
           <div className="text-lg font-bold text-blue-400">
             {formatCurrency(totals.totalBets)}
           </div>
         </div>
-        <div className="bg-gray-700 rounded p-2">
-          <div className="text-xs text-gray-400">Paid Out</div>
+        <div className="rounded p-2" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="text-[10px] text-gray-500 font-semibold tracking-wider">PAID OUT</div>
           <div className="text-lg font-bold text-green-400">
             {formatCurrency(totals.totalPaidOut)}
           </div>
         </div>
-        <div className="bg-gray-700 rounded p-2">
-          <div className="text-xs text-gray-400">Remaining</div>
-          <div className="text-lg font-bold text-yellow-400">
+        <div className="rounded p-2" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="text-[10px] text-gray-500 font-semibold tracking-wider">REMAINING</div>
+          <div className="text-lg font-bold" style={{ color: 'var(--nbc-gold)' }}>
             {formatCurrency(totals.totalPrizePool - totals.totalPaidOut)}
           </div>
         </div>
@@ -165,17 +171,17 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-gray-400 border-b border-gray-700">
-              <th className="text-left py-2">Player</th>
-              <th className="text-center py-2">Squares</th>
-              <th className="text-right py-2">Bet</th>
-              <th className="text-right py-2">Won</th>
-              <th className="text-right py-2">Net</th>
+            <tr className="text-[10px] text-gray-500 font-semibold tracking-wider" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <th className="text-left py-2">PLAYER</th>
+              <th className="text-center py-2">SQ</th>
+              <th className="text-right py-2">BET</th>
+              <th className="text-right py-2">WON</th>
+              <th className="text-right py-2">NET</th>
             </tr>
           </thead>
           <tbody>
             {players.map(player => (
-              <tr key={player.initials} className="border-b border-gray-700/50">
+              <tr key={player.initials} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <td className="py-2 font-semibold">{player.initials}</td>
                 <td className="text-center py-2 text-gray-400">{player.squareCount}</td>
                 <td className="text-right py-2 text-gray-400">
@@ -203,8 +209,8 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
 
       {/* Quarter Win Details */}
       {players.some(p => p.quarterWins.length > 0) && (
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <div className="text-sm text-gray-400 mb-2">Quarter Wins:</div>
+        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="text-[10px] text-gray-500 font-semibold tracking-wider mb-2">QUARTER WINS</div>
           <div className="space-y-1 text-sm">
             {players
               .filter(p => p.quarterWins.length > 0)

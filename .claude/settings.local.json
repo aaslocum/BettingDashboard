@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npx vite build)",
+      "Bash(cmd.exe /c \"cd C:\\\\Users\\\\alxsl\\\\Superbowl\\\\BettingDashboard\\\\client && npx vite build\":*)",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\alxsl\\\\Superbowl\\\\BettingDashboard\\\\client && npx vite build 2>&1\")",
+      "Bash(powershell.exe -Command \"cd ''C:\\\\Users\\\\alxsl\\\\Superbowl\\\\BettingDashboard\\\\client''; npx vite build 2>&1\")",
+      "Bash(powershell.exe -Command \"cd ''C:\\\\Users\\\\alxsl\\\\Superbowl\\\\BettingDashboard\\\\client''; & ''C:\\\\Program Files\\\\nodejs\\\\npx.cmd'' vite build 2>&1\")",
+      "Bash(powershell.exe -Command \"where.exe node 2>&1; where.exe npm 2>&1\")"
+    ]
+  }
+}

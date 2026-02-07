@@ -18,8 +18,11 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
     }
     return (
       <div className="card">
-        <h2 className="text-xl font-bold mb-4 text-yellow-400">Player Props</h2>
-        <p className="text-gray-400">No player props available</p>
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          PLAYER PROPS
+        </h2>
+        <p className="text-gray-400 mt-3">No player props available</p>
       </div>
     );
   }
@@ -112,28 +115,32 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
   // Regular (non-display) mode
   return (
     <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-yellow-400">Player Props</h2>
-        <span className="text-xs text-blue-400">via DraftKings</span>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="nbc-section-header mb-0 pb-0 border-0">
+          <span className="card-header-accent"></span>
+          PLAYER PROPS
+        </h2>
+        <span className="text-[10px] text-gray-600 font-semibold tracking-wider">DRAFTKINGS</span>
       </div>
 
       {propsData.mock && (
-        <div className="text-center text-yellow-500 text-xs mb-3">
-          (Demo data - Add ODDS_API_KEY for live props)
+        <div className="text-center text-xs mb-3" style={{ color: 'var(--nbc-gold)' }}>
+          Demo data - Add ODDS_API_KEY for live props
         </div>
       )}
 
       {/* Category Filter */}
-      <div className="flex flex-wrap gap-1 mb-4">
+      <div className="flex flex-wrap gap-1 mb-3">
         {categories.map(cat => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-2 py-1 rounded text-xs transition-colors ${
+            className={`px-2 py-1 rounded text-xs font-semibold tracking-wide transition-colors ${
               selectedCategory === cat
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                ? 'nbc-tab-active'
+                : 'text-gray-500 hover:text-gray-300'
             }`}
+            style={selectedCategory === cat ? {} : { background: 'rgba(0,0,0,0.25)' }}
           >
             {categoryLabels[cat] || cat}
           </button>
@@ -141,9 +148,9 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
       </div>
 
       {/* Props List */}
-      <div className="space-y-3 max-h-[300px] overflow-y-auto">
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
         {Object.entries(groupedByPlayer).map(([player, playerProps]) => (
-          <div key={player} className="bg-gray-700 rounded-lg p-3">
+          <div key={player} className="rounded p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="font-semibold text-white mb-2 text-sm">
               {player}
             </div>
