@@ -116,6 +116,30 @@ export function claimSquare(index, playerName, gameId) {
   return saveGameData(data);
 }
 
+// Unclaim a square
+export function unclaimSquare(index, playerName, gameId) {
+  const data = getGameData(gameId);
+
+  if (data.grid.locked) {
+    throw new Error('Grid is locked');
+  }
+
+  if (index < 0 || index >= 100) {
+    throw new Error('Invalid square index');
+  }
+
+  if (data.grid.squares[index] === null) {
+    throw new Error('Square is not claimed');
+  }
+
+  if (data.grid.squares[index] !== playerName) {
+    throw new Error('You can only unclaim your own squares');
+  }
+
+  data.grid.squares[index] = null;
+  return saveGameData(data);
+}
+
 // Bulk claim squares - distribute remaining squares evenly among participants
 export function bulkClaimSquares(initialsList, gameId) {
   const data = getGameData(gameId);

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, getBetStats } from '../services/dataService.js';
+import { getGameData, claimSquare, unclaimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, getBetStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -39,6 +39,23 @@ router.post('/claim', (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Error claiming square:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// POST /api/game/unclaim - Unclaim a square
+router.post('/unclaim', (req, res) => {
+  try {
+    const { squareIndex, playerName, gameId } = req.body;
+
+    if (squareIndex === undefined || !playerName) {
+      return res.status(400).json({ error: 'squareIndex and playerName required' });
+    }
+
+    const data = unclaimSquare(parseInt(squareIndex), playerName, gameId);
+    res.json(data);
+  } catch (error) {
+    console.error('Error unclaiming square:', error);
     res.status(400).json({ error: error.message });
   }
 });

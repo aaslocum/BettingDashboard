@@ -155,21 +155,6 @@
   "gameStatus": "setup",
   "createdAt": "2026-02-06T22:58:00.594Z",
   "lastUpdated": "2026-02-07T02:18:34.228Z",
-  "players": [
-    {
-      "id": "p_1770428545712_dl74o6",
-      "firstName": "Greg",
-      "lastName": "Simms",
-      "initials": "GS",
-      "createdAt": "2026-02-07T01:42:25.712Z"
-    },
-    {
-      "id": "p_1770428564453_65ou4c",
-      "firstName": "Alex",
-      "lastName": "Slocum",
-      "initials": "AS",
-      "createdAt": "2026-02-07T01:42:44.453Z"
-    }
-  ],
+  "players": [],
   "bets": []
 }

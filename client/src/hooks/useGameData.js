@@ -43,6 +43,23 @@ export function useGameData(refreshInterval = 5000, gameId = null) {
     return data;
   };
 
+  const unclaimSquare = async (squareIndex, playerName) => {
+    const response = await fetch('/api/game/unclaim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ squareIndex, playerName, gameId })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error);
+    }
+
+    const data = await response.json();
+    setGameData(data);
+    return data;
+  };
+
   const addPlayer = async (firstName, lastName) => {
     const response = await fetch('/api/game/players', {
       method: 'POST',
@@ -92,7 +109,7 @@ export function useGameData(refreshInterval = 5000, gameId = null) {
     return (await response.json()).bet;
   };
 
-  return { gameData, loading, error, refetch: fetchData, claimSquare, addPlayer, removePlayer, placeBet };
+  return { gameData, loading, error, refetch: fetchData, claimSquare, unclaimSquare, addPlayer, removePlayer, placeBet };
 }
 
 export function useOddsData(refreshInterval = 30000) {

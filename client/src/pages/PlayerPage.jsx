@@ -33,9 +33,15 @@ function buildGameContext(gameData) {
   };
 }
 
+const TABS = [
+  { key: 'squares', label: 'Squares' },
+  { key: 'game', label: 'Game' },
+  { key: 'betting', label: 'Betting' },
+];
+
 function PlayerPage() {
   const { currentGameId, currentGame } = useGameContext();
-  const { gameData, loading, error, claimSquare, addPlayer, placeBet } = useGameData(3000, currentGameId);
+  const { gameData, loading, error, claimSquare, unclaimSquare, addPlayer, placeBet } = useGameData(3000, currentGameId);
   const { oddsData } = useOddsData(30000);
   const { propsData } = usePlayerProps(60000);
   const { teamStats } = useTeamStats(15000);
@@ -43,6 +49,7 @@ function PlayerPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [claimError, setClaimError] = useState('');
   const [betSlip, setBetSlip] = useState(null);
+  const [activeTab, setActiveTab] = useState('squares');
 
   // Persist selected player in localStorage per game
   useEffect(() => {
@@ -116,9 +123,29 @@ function PlayerPage() {
 
   const players = gameData.players || [];
   const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+  const pendingBetCount = myBets?.filter(b => b.status === 'pending').length || 0;
 
   const handleSquareClick = async (index) => {
-    if (gameData.grid.locked || gameData.grid.squares[index]) return;
+    if (gameData.grid.locked) return;
+
+    const squareOwner = gameData.grid.squares[index];
+
+    // If square is claimed by the selected player, offer to unclaim
+    if (squareOwner && selectedPlayer && squareOwner === selectedPlayer.initials) {
+      if (confirm(`Unclaim square ${index + 1}? This will remove your claim.`)) {
+        try {
+          setClaimError('');
+          await unclaimSquare(index, selectedPlayer.initials);
+        } catch (err) {
+          setClaimError(err.message);
+          setTimeout(() => setClaimError(''), 3000);
+        }
+      }
+      return;
+    }
+
+    // If square is claimed by someone else, ignore
+    if (squareOwner) return;
 
     if (!selectedPlayer) {
       setClaimError('Select your player first');
@@ -136,7 +163,7 @@ function PlayerPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 pb-8">
+    <div className="max-w-2xl mx-auto pb-8">
       {/* Header */}
       <header className="text-center py-2">
         <h1 className="text-xl sm:text-2xl font-extrabold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>
@@ -150,71 +177,115 @@ function PlayerPage() {
       </header>
 
       {/* Player Selector */}
-      <PlayerSelector
-        players={players}
-        selectedPlayerId={selectedPlayerId}
-        onSelect={handleSelectPlayer}
-        onAddPlayer={addPlayer}
-        betAmount={gameData.betAmount}
-      />
+      <div className="mt-3">
+        <PlayerSelector
+          players={players}
+          selectedPlayerId={selectedPlayerId}
+          onSelect={handleSelectPlayer}
+          onAddPlayer={addPlayer}
+          betAmount={gameData.betAmount}
+        />
+      </div>
 
-      {/* Claim Error */}
+      {/* Claim/Bet Error */}
       {claimError && (
-        <div className="text-center text-sm text-red-400 font-semibold">{claimError}</div>
+        <div className="text-center text-sm text-red-400 font-semibold mt-2">{claimError}</div>
       )}
 
       {/* Scoreboard */}
-      <Scoreboard gameData={gameData} />
+      <div className="mt-3">
+        <Scoreboard gameData={gameData} />
+      </div>
 
-      {/* Squares Grid */}
-      <section className="card">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="nbc-section-header mb-0 pb-0 border-0">
-            <span className="card-header-accent"></span>
-            SQUARES POOL
-          </h2>
-          <span className="text-xs text-gray-500 font-semibold tracking-wide">
-            {gameData.grid.squares.filter(s => s !== null).length}/100
-          </span>
-        </div>
-        <SquaresGrid
-          gameData={gameData}
-          onSquareClick={handleSquareClick}
-          showLikelihood={gameData.grid.locked}
-          gameContext={buildGameContext(gameData)}
-          currentPlayerInitials={selectedPlayer?.initials}
-        />
-        {!gameData.grid.locked && (
-          <p className="text-center text-xs text-gray-500 mt-3">
-            {selectedPlayer
-              ? `Tap an empty square to claim as ${selectedPlayer.initials}`
-              : 'Select your player above, then tap a square to claim it'}
-          </p>
+      {/* Tab Bar */}
+      <div className="flex mt-3 rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 py-2.5 text-xs sm:text-sm font-bold tracking-wider uppercase transition-colors relative ${
+              activeTab === tab.key
+                ? 'text-white'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+            {tab.key === 'betting' && pendingBetCount > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded-full bg-yellow-500 text-black">
+                {pendingBetCount}
+              </span>
+            )}
+            {activeTab === tab.key && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: 'var(--nbc-gold)' }} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="space-y-3 sm:space-y-4 mt-3">
+        {activeTab === 'squares' && (
+          <>
+            {/* Squares Grid */}
+            <section className="card">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="nbc-section-header mb-0 pb-0 border-0">
+                  <span className="card-header-accent"></span>
+                  SQUARES POOL
+                </h2>
+                <span className="text-xs text-gray-500 font-semibold tracking-wide">
+                  {gameData.grid.squares.filter(s => s !== null).length}/100
+                </span>
+              </div>
+              <SquaresGrid
+                gameData={gameData}
+                onSquareClick={handleSquareClick}
+                showLikelihood={gameData.grid.locked}
+                gameContext={buildGameContext(gameData)}
+                currentPlayerInitials={selectedPlayer?.initials}
+              />
+              {!gameData.grid.locked && (
+                <p className="text-center text-xs text-gray-500 mt-3">
+                  {selectedPlayer
+                    ? `Tap an empty square to claim as ${selectedPlayer.initials}`
+                    : 'Select your player above, then tap a square to claim it'}
+                </p>
+              )}
+            </section>
+
+            {/* Winners Panel */}
+            <WinnersPanel quarters={gameData.quarters} />
+
+            {/* Pool Standings */}
+            <PlayerStats gameData={gameData} />
+          </>
         )}
-      </section>
 
-      {/* Winners Panel */}
-      <WinnersPanel quarters={gameData.quarters} />
+        {activeTab === 'game' && (
+          <>
+            {/* Team Stats Section */}
+            <MobileTeamStats teamStats={teamStats} gameData={gameData} />
 
-      {/* Pool Standings */}
-      <PlayerStats gameData={gameData} />
+            {/* Player Game Stats Section */}
+            <MobilePlayerGameStats playerGameStats={playerGameStats} />
+          </>
+        )}
 
-      {/* Team Stats Section */}
-      <MobileTeamStats teamStats={teamStats} gameData={gameData} />
+        {activeTab === 'betting' && (
+          <>
+            {/* My Bets */}
+            {selectedPlayer && myBets && myBets.length > 0 && (
+              <MyBets bets={myBets} />
+            )}
 
-      {/* Player Game Stats Section */}
-      <MobilePlayerGameStats playerGameStats={playerGameStats} />
+            {/* Game Odds */}
+            <OddsDisplay oddsData={oddsData} onBetClick={handleBetClick} />
 
-      {/* My Bets */}
-      {selectedPlayer && myBets && myBets.length > 0 && (
-        <MyBets bets={myBets} />
-      )}
-
-      {/* Game Odds */}
-      <OddsDisplay oddsData={oddsData} onBetClick={handleBetClick} />
-
-      {/* Player Props */}
-      <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} />
+            {/* Player Props */}
+            <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} />
+          </>
+        )}
+      </div>
 
       {/* Bet Slip Modal */}
       {betSlip && (
