@@ -8,10 +8,10 @@ import gameRoutes from './routes/game.js';
 import adminRoutes from './routes/admin.js';
 import gamesRoutes from './routes/games.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
