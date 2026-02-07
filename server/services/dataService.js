@@ -626,15 +626,24 @@ export function getBetStats(gameId) {
     .filter(b => b.status === 'won')
     .reduce((sum, b) => sum + b.potentialPayout, 0);
 
+  const totalWagered = Math.round(bets.reduce((s, b) => s + b.wager, 0) * 100) / 100;
+  const roundedLiability = Math.round(totalPendingLiability * 100) / 100;
+  const roundedProfit = Math.round(houseProfit * 100) / 100;
+
   return {
     players: Object.values(playerBetStats),
     totals: {
       totalBets: bets.length,
       pendingBets: bets.filter(b => b.status === 'pending').length,
       settledBets: bets.filter(b => b.status !== 'pending').length,
-      totalWagered: Math.round(bets.reduce((s, b) => s + b.wager, 0) * 100) / 100,
-      totalPendingLiability: Math.round(totalPendingLiability * 100) / 100,
-      houseProfit: Math.round(houseProfit * 100) / 100
+      totalWagered,
+      totalPendingLiability: roundedLiability,
+      houseProfit: roundedProfit
+    },
+    house: {
+      totalWagered,
+      pendingLiability: roundedLiability,
+      netPosition: roundedProfit
     }
   };
 }

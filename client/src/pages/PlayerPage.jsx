@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useGameData, useOddsData, usePlayerProps, useTeamStats, usePlayerGameStats, useBets } from '../hooks/useGameData';
 import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
@@ -9,6 +9,7 @@ import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 import BetSlipModal from '../components/BetSlipModal';
 import MyBets from '../components/MyBets';
+import { formatCurrency } from '../utils/helpers';
 
 // Build game context for likelihood calculations
 function buildGameContext(gameData) {
@@ -80,6 +81,48 @@ function PlayerPage() {
     }
   };
 
+  // Account summary for selected player (must be before early returns - hooks rule)
+  const players = gameData?.players || [];
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+  const pendingBetCount = myBets?.filter(b => b.status === 'pending').length || 0;
+
+  const acctSummary = useMemo(() => {
+    if (!selectedPlayer || !gameData) return null;
+
+    const initials = selectedPlayer.initials;
+    const betAmount = gameData.betAmount || 1;
+
+    // Squares owed
+    const squareCount = gameData.grid.squares.filter(s => s === initials).length;
+    const squaresOwed = squareCount * betAmount;
+
+    // Squares winnings from completed quarters
+    const squaresWon = Object.values(gameData.quarters)
+      .filter(q => q.completed && q.winner?.player === initials)
+      .reduce((sum, q) => sum + q.prize, 0);
+
+    // Bets owed (all wagers on non-push bets)
+    const bets = myBets || [];
+    const betsOwed = bets
+      .filter(b => b.status !== 'push')
+      .reduce((sum, b) => sum + b.wager, 0);
+
+    // Bet winnings (payouts from won bets)
+    const betsWon = bets
+      .filter(b => b.status === 'won')
+      .reduce((sum, b) => sum + b.potentialPayout, 0);
+
+    // Potential payout from pending bets
+    const pendingPayout = bets
+      .filter(b => b.status === 'pending')
+      .reduce((sum, b) => sum + b.potentialPayout, 0);
+
+    const totalOwed = squaresOwed + betsOwed;
+    const totalWon = squaresWon + betsWon;
+
+    return { squaresOwed, squareCount, betsOwed, totalOwed, totalWon, pendingPayout };
+  }, [selectedPlayer, gameData, myBets]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -98,10 +141,6 @@ function PlayerPage() {
   }
 
   if (!gameData) return null;
-
-  const players = gameData.players || [];
-  const selectedPlayer = players.find(p => p.id === selectedPlayerId);
-  const pendingBetCount = myBets?.filter(b => b.status === 'pending').length || 0;
 
   const handleSquareClick = async (index) => {
     if (gameData.grid.locked) return;
@@ -149,6 +188,39 @@ function PlayerPage() {
 
       {/* Scoreboard - compact */}
       <Scoreboard gameData={gameData} compact />
+
+      {/* Account Summary */}
+      {selectedPlayer && acctSummary && (
+        <div className="mt-2 rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              {selectedPlayer.firstName}'s Account
+            </span>
+            <span className={`text-xs font-bold ${acctSummary.totalWon - acctSummary.totalOwed >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              Net: {acctSummary.totalWon - acctSummary.totalOwed >= 0 ? '+' : ''}{formatCurrency(acctSummary.totalWon - acctSummary.totalOwed)}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 divide-x divide-white/5">
+            <div className="text-center py-2 px-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider">Total Owed</div>
+              <div className="text-sm font-bold text-white">{formatCurrency(acctSummary.totalOwed)}</div>
+            </div>
+            <div className="text-center py-2 px-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider">Squares</div>
+              <div className="text-xs font-semibold text-gray-300">{formatCurrency(acctSummary.squaresOwed)}</div>
+              <div className="text-[9px] text-gray-600">{acctSummary.squareCount} sq</div>
+            </div>
+            <div className="text-center py-2 px-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider">Bets</div>
+              <div className="text-xs font-semibold text-gray-300">{formatCurrency(acctSummary.betsOwed)}</div>
+            </div>
+            <div className="text-center py-2 px-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider">Potential</div>
+              <div className="text-xs font-semibold text-green-400">{acctSummary.pendingPayout > 0 ? '+' : ''}{formatCurrency(acctSummary.pendingPayout)}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Bar */}
       <div className="flex mt-3 rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>

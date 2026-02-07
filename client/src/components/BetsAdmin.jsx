@@ -93,16 +93,19 @@ function BetsAdmin({ gameId }) {
         <div className="grid grid-cols-3 gap-2 mb-4">
           <div className="rounded p-2 text-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="text-[10px] text-gray-500 uppercase tracking-wider">Total Wagered</div>
-            <div className="text-sm font-bold text-white">{formatCurrency(betStats.house?.totalWagered || 0)}</div>
+            <div className="text-xs text-gray-600 mb-0.5">All players combined</div>
+            <div className="text-sm font-bold text-white">{formatCurrency(betStats.house?.totalWagered || betStats.totals?.totalWagered || 0)}</div>
           </div>
           <div className="rounded p-2 text-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="text-[10px] text-gray-500 uppercase tracking-wider">Pending Liability</div>
-            <div className="text-sm font-bold text-yellow-400">{formatCurrency(betStats.house?.pendingLiability || 0)}</div>
+            <div className="text-xs text-gray-600 mb-0.5">If every bet wins</div>
+            <div className="text-sm font-bold text-yellow-400">{formatCurrency(betStats.house?.pendingLiability || betStats.totals?.totalPendingLiability || 0)}</div>
           </div>
           <div className="rounded p-2 text-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="text-[10px] text-gray-500 uppercase tracking-wider">House P/L</div>
-            <div className={`text-sm font-bold ${(betStats.house?.netPosition || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {(betStats.house?.netPosition || 0) >= 0 ? '+' : ''}{formatCurrency(betStats.house?.netPosition || 0)}
+            <div className="text-xs text-gray-600 mb-0.5">Settled bets only</div>
+            <div className={`text-sm font-bold ${(betStats.house?.netPosition ?? betStats.totals?.houseProfit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {(betStats.house?.netPosition ?? betStats.totals?.houseProfit ?? 0) >= 0 ? '+' : ''}{formatCurrency(betStats.house?.netPosition ?? betStats.totals?.houseProfit ?? 0)}
             </div>
           </div>
         </div>
