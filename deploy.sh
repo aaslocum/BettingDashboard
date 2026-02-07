@@ -52,12 +52,14 @@ if [ ! -d "$APP_DIR/.git" ]; then
   echo "  First deploy — cloning..."
   git clone "$REPO" "$APP_DIR"
   cd "$APP_DIR"
-  mkdir -p data
 else
   cd "$APP_DIR"
   git fetch origin
   git reset --hard "origin/$BRANCH"
 fi
+
+# Ensure data directory exists (gitignored, never overwritten)
+mkdir -p data/games
 
 echo "  Installing dependencies..."
 npm install --omit=dev 2>&1 | tail -1

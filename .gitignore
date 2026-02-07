@@ -23,5 +23,5 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Runtime data (keep game.json but ignore runtime changes in dev)
-# data/game.json
+# Runtime game data (written at runtime, unique per environment)
+data/
