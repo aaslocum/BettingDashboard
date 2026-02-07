@@ -409,7 +409,7 @@
   min-height: 100vh;
 }
 
-/* NBC Navigation */
+/* NBC Navigation (legacy - kept for admin if needed) */
 .nbc-nav {
   background: linear-gradient(90deg, var(--nbc-navy) 0%, var(--nbc-blue-accent) 50%, var(--nbc-navy) 100%);
   border-bottom: 2px solid var(--nbc-gold);
@@ -439,6 +439,14 @@
   color: var(--nbc-gold) !important;
   background: rgba(212, 175, 55, 0.1);
   border-bottom-color: var(--nbc-gold);
+}
+
+/* NBC Header Scoreboard — sticky app header replacing nav */
+.nbc-header-scoreboard {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border-bottom: 2px solid var(--nbc-gold);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 /* Section Header (reusable for player/admin pages) */

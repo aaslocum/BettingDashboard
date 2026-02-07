@@ -4,7 +4,7 @@ import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
-import Scoreboard from '../components/Scoreboard';
+// Scoreboard is now rendered in the App header
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 import BetSlipModal from '../components/BetSlipModal';
@@ -185,9 +185,6 @@ function PlayerPage() {
       {claimError && (
         <div className="text-center text-sm text-red-400 font-semibold mb-2">{claimError}</div>
       )}
-
-      {/* Scoreboard - compact */}
-      <Scoreboard gameData={gameData} compact />
 
       {/* Account Summary */}
       {selectedPlayer && acctSummary && (

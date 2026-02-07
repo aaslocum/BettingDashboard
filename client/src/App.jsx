@@ -1,7 +1,8 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { GameProvider, useGameContext } from './context/GameContext';
 import { useGameData } from './hooks/useGameData';
 import PlayerSelector from './components/PlayerSelector';
+import Scoreboard from './components/Scoreboard';
 import PlayerPage from './pages/PlayerPage';
 import AdminPage from './pages/AdminPage';
 import DisplayPage from './pages/DisplayPage';
@@ -12,36 +13,19 @@ function AppContent() {
   const { currentGameId, selectedPlayerId, selectPlayer } = useGameContext();
   const { gameData, addPlayer } = useGameData(3000, currentGameId);
 
-  // Hide navigation in display mode for cleaner TV view
+  // Hide header in display mode for cleaner TV view
   if (isDisplayMode) {
     return <DisplayPage />;
   }
-
-  const navLinks = [
-    { to: '/', label: 'Play' },
-    { to: '/admin', label: 'Admin' },
-    { to: '/display', label: 'TV' },
-  ];
 
   const players = gameData?.players || [];
 
   return (
     <div className="min-h-screen nbc-app-bg">
-      {/* Navigation */}
-      <nav className="nbc-nav">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between h-12 sm:h-14">
-            <div className="flex items-center gap-0.5">
-              {navLinks.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`nbc-nav-link ${location.pathname === to ? 'nbc-nav-link-active' : ''}`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
+      {/* Header Scoreboard */}
+      {gameData && (
+        <header className="sticky top-0 z-30">
+          <Scoreboard gameData={gameData} header>
             <PlayerSelector
               compact
               players={players}
@@ -50,9 +34,9 @@ function AppContent() {
               onAddPlayer={addPlayer}
               betAmount={gameData?.betAmount}
             />
-          </div>
-        </div>
-      </nav>
+          </Scoreboard>
+        </header>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
