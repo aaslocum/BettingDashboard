@@ -1,7 +1,7 @@
 {
   "teams": {
-    "home": { "name": "Kansas City Chiefs", "abbreviation": "KC" },
-    "away": { "name": "Philadelphia Eagles", "abbreviation": "PHI" }
+    "home": { "name": "Seattle Seahawks", "abbreviation": "SEA" },
+    "away": { "name": "New England Patriots", "abbreviation": "NE" }
   },
   "grid": {
     "locked": false,

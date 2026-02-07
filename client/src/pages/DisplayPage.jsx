@@ -101,9 +101,6 @@ function DisplayPage() {
               />
             ))}
           </div>
-
-          {/* Winners Panel */}
-          <WinnersPanel quarters={gameData.quarters} displayMode />
         </div>
 
         {/* Center - Grid */}
@@ -132,6 +129,9 @@ function DisplayPage() {
           {gameData.grid.locked && (
             <CurrentWinnerPreview gameData={gameData} />
           )}
+
+          {/* Quarter Winners */}
+          <WinnersPanel quarters={gameData.quarters} displayMode />
 
           {/* Player Stats (Squares Pool) */}
           <PlayerStats gameData={gameData} displayMode />
@@ -170,7 +170,7 @@ function NBCScoreboard({ gameData }) {
   const { teams, scores, quarters } = gameData;
 
   // Determine game status
-  let gameStatus = 'SUPER BOWL LIX';
+  let gameStatus = 'SUPER BOWL LX';
   const completedQuarters = Object.values(quarters).filter(q => q.completed).length;
   if (completedQuarters > 0 && completedQuarters < 4) {
     const quarterNames = ['1ST', '2ND', '3RD', '4TH'];

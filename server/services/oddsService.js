@@ -100,7 +100,7 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
   }
 
   try {
-    // Player prop markets
+    // Player prop markets - these require the per-event endpoint
     const propMarkets = [
       'player_pass_tds',
       'player_pass_yds',
@@ -110,15 +110,34 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
       'player_anytime_td'
     ].join(',');
 
-    const url = new URL(`${ODDS_API_BASE}/sports/americanfootball_nfl/odds`);
+    // If no eventId provided, fetch events first to get one
+    let targetEventId = eventId;
+    if (!targetEventId) {
+      const eventsUrl = new URL(`${ODDS_API_BASE}/sports/americanfootball_nfl/odds`);
+      eventsUrl.searchParams.append('apiKey', apiKey);
+      eventsUrl.searchParams.append('regions', 'us');
+      eventsUrl.searchParams.append('markets', 'h2h');
+      eventsUrl.searchParams.append('bookmakers', DRAFTKINGS_KEY);
+      const eventsResponse = await fetch(eventsUrl.toString());
+      if (!eventsResponse.ok) {
+        const error = await eventsResponse.text();
+        throw new Error(`Events API error: ${eventsResponse.status} - ${error}`);
+      }
+      const events = await eventsResponse.json();
+      if (events.length === 0) {
+        throw new Error('No NFL events found');
+      }
+      // Use the first available event (Super Bowl)
+      targetEventId = events[0].id;
+    }
+
+    // Use the per-event endpoint which supports player prop markets
+    const url = new URL(`${ODDS_API_BASE}/sports/americanfootball_nfl/events/${targetEventId}/odds`);
     url.searchParams.append('apiKey', apiKey);
     url.searchParams.append('regions', 'us');
     url.searchParams.append('markets', propMarkets);
     url.searchParams.append('oddsFormat', 'american');
     url.searchParams.append('bookmakers', DRAFTKINGS_KEY);
-    if (eventId) {
-      url.searchParams.append('eventIds', eventId);
-    }
 
     const response = await fetch(url.toString());
 
@@ -127,34 +146,32 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
       throw new Error(`Props API error: ${response.status} - ${error}`);
     }
 
-    const games = await response.json();
+    const game = await response.json();
 
-    // Process player props
-    const propsData = {
-      games: games.map(game => {
-        const draftkings = game.bookmakers?.find(b => b.key === DRAFTKINGS_KEY);
-        const props = [];
+    // Process player props - per-event endpoint returns a single event object
+    const draftkings = game.bookmakers?.find(b => b.key === DRAFTKINGS_KEY);
+    const props = [];
 
-        draftkings?.markets?.forEach(market => {
-          market.outcomes?.forEach(outcome => {
-            props.push({
-              market: market.key,
-              marketName: formatPropMarketName(market.key),
-              player: outcome.description || outcome.name,
-              name: outcome.name,
-              line: outcome.point,
-              odds: outcome.price
-            });
-          });
+    draftkings?.markets?.forEach(market => {
+      market.outcomes?.forEach(outcome => {
+        props.push({
+          market: market.key,
+          marketName: formatPropMarketName(market.key),
+          player: outcome.description || outcome.name,
+          name: outcome.name,
+          line: outcome.point,
+          odds: outcome.price
         });
+      });
+    });
 
-        return {
-          id: game.id,
-          homeTeam: game.home_team,
-          awayTeam: game.away_team,
-          props
-        };
-      }),
+    const propsData = {
+      games: [{
+        id: game.id,
+        homeTeam: game.home_team,
+        awayTeam: game.away_team,
+        props
+      }],
       timestamp: new Date().toISOString(),
       remainingRequests: response.headers.get('x-requests-remaining')
     };
@@ -263,10 +280,10 @@ export function getMockScores(simulateLive = false) {
 
   return {
     games: [{
-      id: 'superbowl-2025',
+      id: 'superbowl-lx-2026',
       sport: 'americanfootball_nfl',
-      homeTeam: 'Kansas City Chiefs',
-      awayTeam: 'Philadelphia Eagles',
+      homeTeam: 'Seattle Seahawks',
+      awayTeam: 'New England Patriots',
       commenceTime: new Date().toISOString(),
       completed: false,
       scores: {
@@ -290,14 +307,14 @@ export function resetMockScores() {
   };
 }
 
-// Get mock data for development/demo (DraftKings only)
+// Get mock data for development/demo (Super Bowl LX - DraftKings only)
 export function getMockOdds() {
   return {
     games: [{
-      id: 'superbowl-2025',
+      id: 'superbowl-lx-2026',
       sport: 'americanfootball_nfl',
-      homeTeam: 'Kansas City Chiefs',
-      awayTeam: 'Philadelphia Eagles',
+      homeTeam: 'Seattle Seahawks',
+      awayTeam: 'New England Patriots',
       commenceTime: new Date().toISOString(),
       bookmakers: [
         {
@@ -307,22 +324,22 @@ export function getMockOdds() {
             {
               key: 'h2h',
               outcomes: [
-                { name: 'Kansas City Chiefs', price: -130 },
-                { name: 'Philadelphia Eagles', price: +110 }
+                { name: 'Seattle Seahawks', price: -238 },
+                { name: 'New England Patriots', price: +195 }
               ]
             },
             {
               key: 'spreads',
               outcomes: [
-                { name: 'Kansas City Chiefs', price: -110, point: -2.5 },
-                { name: 'Philadelphia Eagles', price: -110, point: 2.5 }
+                { name: 'Seattle Seahawks', price: -110, point: -4.5 },
+                { name: 'New England Patriots', price: -110, point: 4.5 }
               ]
             },
             {
               key: 'totals',
               outcomes: [
-                { name: 'Over', price: -110, point: 49.5 },
-                { name: 'Under', price: -110, point: 49.5 }
+                { name: 'Over', price: -110, point: 45.5 },
+                { name: 'Under', price: -110, point: 45.5 }
               ]
             }
           ]
@@ -334,34 +351,69 @@ export function getMockOdds() {
   };
 }
 
-// Get mock player props for development/demo
+// Get mock player props for development/demo (Super Bowl LX - Seahawks vs Patriots)
 export function getMockPlayerProps() {
   return {
     games: [{
-      id: 'superbowl-2025',
-      homeTeam: 'Kansas City Chiefs',
-      awayTeam: 'Philadelphia Eagles',
+      id: 'superbowl-lx-2026',
+      homeTeam: 'Seattle Seahawks',
+      awayTeam: 'New England Patriots',
       props: [
-        // Passing props
-        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Patrick Mahomes', name: 'Over', line: 274.5, odds: -115 },
-        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Patrick Mahomes', name: 'Under', line: 274.5, odds: -105 },
-        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Jalen Hurts', name: 'Over', line: 224.5, odds: -110 },
-        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Jalen Hurts', name: 'Under', line: 224.5, odds: -110 },
-        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Patrick Mahomes', name: 'Over', line: 1.5, odds: -150 },
-        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Jalen Hurts', name: 'Over', line: 1.5, odds: -120 },
-        // Rushing props
-        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Isiah Pacheco', name: 'Over', line: 54.5, odds: -115 },
-        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Jalen Hurts', name: 'Over', line: 44.5, odds: -110 },
-        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Saquon Barkley', name: 'Over', line: 74.5, odds: -115 },
-        // Receiving props
-        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Travis Kelce', name: 'Over', line: 64.5, odds: -115 },
-        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'A.J. Brown', name: 'Over', line: 74.5, odds: -110 },
-        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'DeVonta Smith', name: 'Over', line: 54.5, odds: -115 },
+        // Passing Yards
+        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Sam Darnold', name: 'Over', line: 228.5, odds: -110 },
+        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Sam Darnold', name: 'Under', line: 228.5, odds: -110 },
+        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Drake Maye', name: 'Over', line: 220.5, odds: -110 },
+        { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Drake Maye', name: 'Under', line: 220.5, odds: -110 },
+        // Passing TDs
+        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Sam Darnold', name: 'Over', line: 1.5, odds: -140 },
+        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Sam Darnold', name: 'Under', line: 1.5, odds: +120 },
+        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Drake Maye', name: 'Over', line: 1.5, odds: -120 },
+        { market: 'player_pass_tds', marketName: 'Passing TDs', player: 'Drake Maye', name: 'Under', line: 1.5, odds: +100 },
+        // Rushing Yards
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Kenneth Walker III', name: 'Over', line: 71.5, odds: -113 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Kenneth Walker III', name: 'Under', line: 71.5, odds: -107 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Rhamondre Stevenson', name: 'Over', line: 49.5, odds: -115 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Rhamondre Stevenson', name: 'Under', line: 49.5, odds: -105 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Drake Maye', name: 'Over', line: 36.5, odds: -102 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'Drake Maye', name: 'Under', line: 36.5, odds: -118 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'TreVeyon Henderson', name: 'Over', line: 18.5, odds: -110 },
+        { market: 'player_rush_yds', marketName: 'Rushing Yards', player: 'TreVeyon Henderson', name: 'Under', line: 18.5, odds: -110 },
+        // Receptions
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Jaxon Smith-Njigba', name: 'Over', line: 6.5, odds: -147 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Jaxon Smith-Njigba', name: 'Under', line: 6.5, odds: +120 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Stefon Diggs', name: 'Over', line: 4.5, odds: -125 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Stefon Diggs', name: 'Under', line: 4.5, odds: +105 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Cooper Kupp', name: 'Over', line: 3.5, odds: -115 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Cooper Kupp', name: 'Under', line: 3.5, odds: -105 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Hunter Henry', name: 'Over', line: 3.5, odds: -110 },
+        { market: 'player_receptions', marketName: 'Receptions', player: 'Hunter Henry', name: 'Under', line: 3.5, odds: -110 },
+        // Receiving Yards
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Jaxon Smith-Njigba', name: 'Over', line: 94.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Jaxon Smith-Njigba', name: 'Under', line: 94.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Stefon Diggs', name: 'Over', line: 43.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Stefon Diggs', name: 'Under', line: 43.5, odds: -113 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Cooper Kupp', name: 'Over', line: 38.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Cooper Kupp', name: 'Under', line: 38.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Rashid Shaheed', name: 'Over', line: 35.5, odds: -115 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Rashid Shaheed', name: 'Under', line: 35.5, odds: -105 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Hunter Henry', name: 'Over', line: 32.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Hunter Henry', name: 'Under', line: 32.5, odds: -110 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'AJ Barner', name: 'Over', line: 24.5, odds: -115 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'AJ Barner', name: 'Under', line: 24.5, odds: -105 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Kenneth Walker III', name: 'Over', line: 20.5, odds: -145 },
+        { market: 'player_reception_yds', marketName: 'Receiving Yards', player: 'Kenneth Walker III', name: 'Under', line: 20.5, odds: +120 },
         // Anytime TD
-        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Travis Kelce', name: 'Yes', line: null, odds: -120 },
-        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Saquon Barkley', name: 'Yes', line: null, odds: -150 },
-        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'A.J. Brown', name: 'Yes', line: null, odds: +110 },
-        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Isiah Pacheco', name: 'Yes', line: null, odds: +120 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Kenneth Walker III', name: 'Yes', line: null, odds: -195 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Jaxon Smith-Njigba', name: 'Yes', line: null, odds: -110 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Rhamondre Stevenson', name: 'Yes', line: null, odds: +140 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Sam Darnold', name: 'Yes', line: null, odds: +170 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Drake Maye', name: 'Yes', line: null, odds: +180 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Stefon Diggs', name: 'Yes', line: null, odds: +190 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Cooper Kupp', name: 'Yes', line: null, odds: +260 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Hunter Henry', name: 'Yes', line: null, odds: +280 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'AJ Barner', name: 'Yes', line: null, odds: +300 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'TreVeyon Henderson', name: 'Yes', line: null, odds: +310 },
+        { market: 'player_anytime_td', marketName: 'Anytime TD', player: 'Rashid Shaheed', name: 'Yes', line: null, odds: +320 },
       ]
     }],
     timestamp: new Date().toISOString(),

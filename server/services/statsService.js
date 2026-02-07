@@ -33,21 +33,26 @@ const mockTeamStats = {
   }
 };
 
+// Super Bowl LX mock player stats - Seahawks vs Patriots
 const mockPlayerStats = {
   passing: [
-    { name: 'P. Mahomes', team: 'KC', comp: 18, att: 24, yards: 198, td: 2, int: 0, rating: 128.5 },
-    { name: 'J. Hurts', team: 'PHI', comp: 21, att: 29, yards: 241, td: 1, int: 1, rating: 98.2 }
+    { name: 'S. Darnold', team: 'SEA', comp: 19, att: 28, yards: 234, td: 2, int: 0, rating: 115.3 },
+    { name: 'D. Maye', team: 'NE', comp: 17, att: 26, yards: 198, td: 1, int: 1, rating: 88.7 }
   ],
   rushing: [
-    { name: 'I. Pacheco', team: 'KC', carries: 12, yards: 67, avg: 5.6, td: 1, long: 18 },
-    { name: 'S. Barkley', team: 'PHI', carries: 14, yards: 58, avg: 4.1, td: 0, long: 12 },
-    { name: 'J. Hurts', team: 'PHI', carries: 4, yards: 13, avg: 3.3, td: 1, long: 8 }
+    { name: 'K. Walker III', team: 'SEA', carries: 18, yards: 82, avg: 4.6, td: 1, long: 19 },
+    { name: 'R. Stevenson', team: 'NE', carries: 14, yards: 56, avg: 4.0, td: 0, long: 13 },
+    { name: 'D. Maye', team: 'NE', carries: 6, yards: 34, avg: 5.7, td: 0, long: 16 },
+    { name: 'T. Henderson', team: 'NE', carries: 4, yards: 18, avg: 4.5, td: 1, long: 9 }
   ],
   receiving: [
-    { name: 'T. Kelce', team: 'KC', rec: 7, targets: 9, yards: 89, avg: 12.7, td: 1, long: 24 },
-    { name: 'A.J. Brown', team: 'PHI', rec: 6, targets: 8, yards: 102, avg: 17.0, td: 1, long: 34 },
-    { name: 'D. Smith', team: 'PHI', rec: 5, targets: 7, yards: 67, avg: 13.4, td: 0, long: 22 },
-    { name: 'R. Rice', team: 'KC', rec: 4, targets: 6, yards: 52, avg: 13.0, td: 1, long: 19 }
+    { name: 'J. Smith-Njigba', team: 'SEA', rec: 8, targets: 11, yards: 112, avg: 14.0, td: 1, long: 34 },
+    { name: 'S. Diggs', team: 'NE', rec: 5, targets: 8, yards: 47, avg: 9.4, td: 0, long: 16 },
+    { name: 'C. Kupp', team: 'SEA', rec: 4, targets: 5, yards: 42, avg: 10.5, td: 1, long: 18 },
+    { name: 'H. Henry', team: 'NE', rec: 4, targets: 6, yards: 52, avg: 13.0, td: 1, long: 22 },
+    { name: 'R. Shaheed', team: 'SEA', rec: 3, targets: 5, yards: 38, avg: 12.7, td: 0, long: 21 },
+    { name: 'A. Barner', team: 'SEA', rec: 3, targets: 4, yards: 28, avg: 9.3, td: 0, long: 14 },
+    { name: 'K. Boutte', team: 'NE', rec: 2, targets: 4, yards: 31, avg: 15.5, td: 0, long: 19 }
   ]
 };
 
