@@ -152,7 +152,7 @@ export async function manualSync(apiKey) {
 }
 
 // Helper to get team abbreviation from full name
-function getTeamAbbreviation(teamName) {
+export function getTeamAbbreviation(teamName) {
   const abbreviations = {
     'Arizona Cardinals': 'ARI',
     'Atlanta Falcons': 'ATL',

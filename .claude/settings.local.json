@@ -14,7 +14,8 @@
       "Bash(cmd /c \"where npm\")",
       "Bash(cmd /c \"npm run build\")",
       "Bash(git -C \"C:\\\\Users\\\\alxsl\\\\Superbowl\\\\BettingDashboard\" remote -v)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(timeout 5 node:*)"
     ]
   }
 }

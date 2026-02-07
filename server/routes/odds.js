@@ -1,8 +1,35 @@
 import { Router } from 'express';
 import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps } from '../services/oddsService.js';
 import { getTeamStats, getPlayerGameStats } from '../services/statsService.js';
+import { getGameData, updateTeams } from '../services/dataService.js';
+import { getDefaultGameId } from '../services/gamesService.js';
+import { getTeamAbbreviation } from '../services/syncService.js';
 
 const router = Router();
+
+// Auto-populate game teams from odds data if still using placeholders
+function autoPopulateTeams(oddsData) {
+  try {
+    const game = oddsData?.games?.[0];
+    if (!game?.homeTeam || !game?.awayTeam) return;
+
+    const gameId = getDefaultGameId();
+    if (!gameId) return;
+
+    const data = getGameData(gameId);
+    const isPlaceholder = data.teams.home.name === 'Team A' || data.teams.home.name === 'Team B'
+      || data.teams.home.abbreviation === 'TMA' || data.teams.away.abbreviation === 'TMB';
+
+    if (isPlaceholder) {
+      const home = { name: game.homeTeam, abbreviation: getTeamAbbreviation(game.homeTeam) };
+      const away = { name: game.awayTeam, abbreviation: getTeamAbbreviation(game.awayTeam) };
+      updateTeams(home, away, gameId);
+      console.log(`Auto-populated teams from odds: ${away.abbreviation} @ ${home.abbreviation}`);
+    }
+  } catch (err) {
+    // Silent - don't break odds response if team update fails
+  }
+}
 
 // GET /api/odds - Fetch current betting odds (DraftKings only)
 router.get('/', async (req, res) => {
@@ -16,6 +43,7 @@ router.get('/', async (req, res) => {
     }
 
     const odds = await fetchSuperBowlOdds(apiKey);
+    autoPopulateTeams(odds);
     res.json(odds);
   } catch (error) {
     console.error('Error fetching odds:', error);

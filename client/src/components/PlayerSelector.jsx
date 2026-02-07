@@ -62,54 +62,61 @@ function PlayerSelector({ players = [], selectedPlayerId, onSelect, onAddPlayer,
           )}
         </div>
 
-        {/* Compact Join Form - dropdown */}
+        {/* Join Modal */}
         {showJoinForm && (
           <>
             <div
-              className="fixed inset-0 z-10"
+              className="fixed inset-0 z-40 bg-black/60"
               onClick={() => { setShowJoinForm(false); setError(''); }}
             />
-            <form onSubmit={handleJoin} className="absolute top-full mt-1 right-0 w-64 bg-gray-800 rounded-lg border border-gray-700 shadow-xl z-20 p-3">
-              <div className="text-[10px] text-gray-500 font-semibold tracking-wider mb-2">JOIN GAME</div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="input-field flex-1 text-sm"
-                  autoFocus
-                />
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="input-field flex-1 text-sm"
-                />
-              </div>
-              {error && (
-                <div className="text-red-400 text-xs mt-2">{error}</div>
-              )}
-              <div className="flex gap-2 mt-2">
-                <button
-                  type="submit"
-                  className="btn-success text-xs flex-1"
-                  disabled={loading || !firstName.trim() || !lastName.trim()}
-                  style={{ padding: '6px 10px' }}
-                >
-                  {loading ? 'Joining...' : 'Join'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowJoinForm(false); setError(''); }}
-                  className="btn-secondary text-xs"
-                  style={{ padding: '6px 10px' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <form
+                onSubmit={handleJoin}
+                className="w-full max-w-sm bg-gray-800 rounded-xl border border-gray-700 shadow-2xl p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="text-sm font-bold tracking-widest uppercase mb-1" style={{ color: 'var(--nbc-gold)' }}>
+                  Join Game
+                </h2>
+                <p className="text-xs text-gray-500 mb-4">Enter your name to start playing</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="input-field w-full"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="input-field w-full"
+                  />
+                </div>
+                {error && (
+                  <div className="text-red-400 text-xs mt-3">{error}</div>
+                )}
+                <div className="flex gap-3 mt-5">
+                  <button
+                    type="submit"
+                    className="btn-success flex-1 py-2.5 text-sm font-bold"
+                    disabled={loading || !firstName.trim() || !lastName.trim()}
+                  >
+                    {loading ? 'Joining...' : 'Join Game'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowJoinForm(false); setError(''); }}
+                    className="btn-secondary px-5 py-2.5 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </>
         )}
       </div>
