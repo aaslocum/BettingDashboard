@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { formatOdds, getOddsColorClass, calculatePayout, calculateMaxWager, formatCurrency } from '../utils/helpers';
 
 function BetSlipModal({ bet, onPlace, onClose }) {
-  const maxWager = useMemo(() => calculateMaxWager(bet.odds, 10), [bet.odds]);
+  const maxPayout = 20;
+  const maxWager = useMemo(() => calculateMaxWager(bet.odds, maxPayout), [bet.odds]);
   const [wager, setWager] = useState(Math.min(1, maxWager));
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
@@ -12,7 +13,7 @@ function BetSlipModal({ bet, onPlace, onClose }) {
     return Math.round(val * 100) / 100;
   }, [bet.odds, wager]);
 
-  const isValid = wager >= 0.25 && wager <= maxWager && payout <= 10.01;
+  const isValid = wager >= 0.25 && wager <= maxWager && payout < maxPayout;
 
   const handlePlace = async () => {
     if (!isValid) return;
@@ -47,7 +48,7 @@ function BetSlipModal({ bet, onPlace, onClose }) {
         {/* Wager Input */}
         <div className="mb-4">
           <label className="text-xs text-gray-400 block mb-1">
-            Wager Amount (max {formatCurrency(maxWager)} for $10 payout)
+            Wager Amount (max {formatCurrency(maxWager)} for ${maxPayout} payout)
           </label>
           <div className="flex items-center gap-2">
             <span className="text-gray-400 text-lg">$</span>
