@@ -1,16 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGameData, useOddsData, usePlayerProps, useTeamStats, usePlayerGameStats, useBets } from '../hooks/useGameData';
 import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
 import Scoreboard from '../components/Scoreboard';
-import PlayerSelector from '../components/PlayerSelector';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 import BetSlipModal from '../components/BetSlipModal';
 import MyBets from '../components/MyBets';
-import { formatCurrency } from '../utils/helpers';
 
 // Build game context for likelihood calculations
 function buildGameContext(gameData) {
@@ -35,40 +33,20 @@ function buildGameContext(gameData) {
 
 const TABS = [
   { key: 'squares', label: 'Squares' },
-  { key: 'game', label: 'Game' },
+  { key: 'game', label: 'Game Stats' },
   { key: 'betting', label: 'Betting' },
 ];
 
 function PlayerPage() {
-  const { currentGameId, currentGame } = useGameContext();
+  const { currentGameId, selectedPlayerId } = useGameContext();
   const { gameData, loading, error, claimSquare, unclaimSquare, addPlayer, placeBet } = useGameData(3000, currentGameId);
   const { oddsData } = useOddsData(30000);
   const { propsData } = usePlayerProps(60000);
   const { teamStats } = useTeamStats(15000);
   const { playerGameStats } = usePlayerGameStats(15000);
-  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [claimError, setClaimError] = useState('');
   const [betSlip, setBetSlip] = useState(null);
   const [activeTab, setActiveTab] = useState('squares');
-
-  // Persist selected player in localStorage per game
-  useEffect(() => {
-    if (currentGameId) {
-      const stored = localStorage.getItem(`selectedPlayer_${currentGameId}`);
-      if (stored) setSelectedPlayerId(stored);
-    }
-  }, [currentGameId]);
-
-  const handleSelectPlayer = (playerId) => {
-    setSelectedPlayerId(playerId);
-    if (currentGameId) {
-      if (playerId) {
-        localStorage.setItem(`selectedPlayer_${currentGameId}`, playerId);
-      } else {
-        localStorage.removeItem(`selectedPlayer_${currentGameId}`);
-      }
-    }
-  };
 
   const { bets: myBets, refetchBets } = useBets(10000, currentGameId, selectedPlayerId);
 
@@ -164,38 +142,13 @@ function PlayerPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-8">
-      {/* Header */}
-      <header className="text-center py-2">
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>
-          {gameData?.name || 'Super Bowl Squares'}
-        </h1>
-        {gameData?.betAmount && (
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 tracking-wide">
-            {formatCurrency(gameData.betAmount)}/square · {formatCurrency(gameData.totalPool)} pool
-          </p>
-        )}
-      </header>
-
-      {/* Player Selector */}
-      <div className="mt-3">
-        <PlayerSelector
-          players={players}
-          selectedPlayerId={selectedPlayerId}
-          onSelect={handleSelectPlayer}
-          onAddPlayer={addPlayer}
-          betAmount={gameData.betAmount}
-        />
-      </div>
-
       {/* Claim/Bet Error */}
       {claimError && (
-        <div className="text-center text-sm text-red-400 font-semibold mt-2">{claimError}</div>
+        <div className="text-center text-sm text-red-400 font-semibold mb-2">{claimError}</div>
       )}
 
-      {/* Scoreboard */}
-      <div className="mt-3">
-        <Scoreboard gameData={gameData} />
-      </div>
+      {/* Scoreboard - compact */}
+      <Scoreboard gameData={gameData} compact />
 
       {/* Tab Bar */}
       <div className="flex mt-3 rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>

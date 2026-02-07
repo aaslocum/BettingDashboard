@@ -69,21 +69,21 @@ function DisplayPage() {
   if (!gameData) return null;
 
   return (
-    <div className="min-h-screen p-4 display-mode">
-      {/* NBC-Style Header */}
-      <div className="nbc-main-title mb-4">
+    <div className="overflow-hidden p-2 display-mode flex flex-col" style={{ height: '100dvh' }}>
+      {/* NBC-Style Header - compact */}
+      <div className="nbc-main-title display-title-compact mb-2">
         <h1>{gameData?.name?.toUpperCase() || 'SUPER BOWL SQUARES'}</h1>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-140px)]">
+      {/* Main Content - fills remaining space above ticker */}
+      <div className="grid grid-cols-12 gap-2 flex-1 min-h-0 mb-8">
         {/* Left Side - Rotating Panels */}
-        <div className="col-span-3 flex flex-col gap-4 overflow-hidden">
+        <div className="col-span-3 flex flex-col gap-2 overflow-hidden">
           {/* Odds Display (always visible) */}
           <OddsDisplay oddsData={oddsData} displayMode />
 
           {/* Rotating Panel */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-h-0">
             <RotatingPanel
               activePanel={activePanel}
               propsData={propsData}
@@ -104,13 +104,13 @@ function DisplayPage() {
         </div>
 
         {/* Center - Grid */}
-        <div className="col-span-6 flex flex-col">
-          <div className="nbc-panel flex-1 flex flex-col">
-            <div className="nbc-panel-header">
+        <div className="col-span-6 flex flex-col min-h-0">
+          <div className="nbc-panel flex-1 flex flex-col min-h-0">
+            <div className="nbc-panel-header display-panel-header-compact">
               <span className="nbc-header-accent"></span>
               <h3 className="nbc-panel-title">SQUARES POOL - {formatCurrency(gameData?.totalPool || 100)} POT</h3>
             </div>
-            <div className="flex-1 p-4 flex items-center justify-center">
+            <div className="flex-1 p-2 flex items-center justify-center min-h-0">
               <SquaresGrid
                 gameData={gameData}
                 displayMode
@@ -122,7 +122,7 @@ function DisplayPage() {
         </div>
 
         {/* Right Side - Scoreboard & Stats */}
-        <div className="col-span-3 space-y-4 overflow-y-auto max-h-full">
+        <div className="col-span-3 flex flex-col gap-2 overflow-hidden min-h-0">
           <NBCScoreboard gameData={gameData} />
 
           {/* Current Winner Preview */}
@@ -130,16 +130,16 @@ function DisplayPage() {
             <CurrentWinnerPreview gameData={gameData} />
           )}
 
-          {/* Quarter Winners */}
-          <WinnersPanel quarters={gameData.quarters} displayMode />
-
-          {/* Player Stats (Squares Pool) */}
-          <PlayerStats gameData={gameData} displayMode />
+          {/* Quarter Winners & Player Stats - scrollable if needed */}
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
+            <WinnersPanel quarters={gameData.quarters} displayMode />
+            <PlayerStats gameData={gameData} displayMode />
+          </div>
         </div>
       </div>
 
       {/* Footer Ticker */}
-      <div className="fixed bottom-0 left-0 right-0 nbc-ticker overflow-hidden">
+      <div className="fixed bottom-0 left-0 right-0 nbc-ticker nbc-ticker-compact overflow-hidden">
         <div className="nbc-ticker-content">
           <CombinedTicker oddsData={oddsData} propsData={propsData} />
         </div>
@@ -182,13 +182,13 @@ function NBCScoreboard({ gameData }) {
   return (
     <div className="nbc-scoreboard">
       <div className="nbc-scoreboard-header">{gameStatus}</div>
-      <div className="nbc-score-row">
-        <span className="nbc-team-name">{teams.away.abbreviation}</span>
-        <span className="nbc-score">{scores.away}</span>
+      <div className="nbc-score-row display-score-row-compact">
+        <span className="nbc-team-name display-team-compact">{teams.away.abbreviation}</span>
+        <span className="nbc-score display-score-compact">{scores.away}</span>
       </div>
-      <div className="nbc-score-row">
-        <span className="nbc-team-name">{teams.home.abbreviation}</span>
-        <span className="nbc-score">{scores.home}</span>
+      <div className="nbc-score-row display-score-row-compact">
+        <span className="nbc-team-name display-team-compact">{teams.home.abbreviation}</span>
+        <span className="nbc-score display-score-compact">{scores.home}</span>
       </div>
     </div>
   );
@@ -208,16 +208,16 @@ function CurrentWinnerPreview({ gameData }) {
 
   return (
     <div className="nbc-panel">
-      <div className="nbc-panel-header">
+      <div className="nbc-panel-header display-panel-header-compact">
         <span className="nbc-header-accent"></span>
         <h3 className="nbc-panel-title">WINNING SQUARE</h3>
       </div>
-      <div className="p-4 text-center">
-        <div className="text-4xl font-extrabold text-nbc-gold mb-2">
+      <div className="p-2 text-center">
+        <div className="text-2xl font-extrabold text-nbc-gold mb-1">
           {currentWinner || '???'}
         </div>
-        <div className="text-sm text-gray-400">
-          Score: {teams.away.abbreviation} {awayLastDigit} - {teams.home.abbreviation} {homeLastDigit}
+        <div className="text-xs text-gray-400">
+          {teams.away.abbreviation} {awayLastDigit} - {teams.home.abbreviation} {homeLastDigit}
         </div>
       </div>
     </div>
@@ -281,7 +281,7 @@ function CombinedTicker({ oddsData, propsData }) {
   }
 
   return (
-    <div className="whitespace-nowrap odds-ticker text-lg">
+    <div className="whitespace-nowrap odds-ticker text-sm">
       {tickerItems.map((item, i) => (
         <span key={i} className="mx-8">
           <span className={item.type === 'prop' ? 'text-green-400' : 'text-nbc-gold'}>

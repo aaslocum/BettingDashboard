@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function PlayerSelector({ players = [], selectedPlayerId, onSelect, onAddPlayer, betAmount = 1 }) {
+function PlayerSelector({ players = [], selectedPlayerId, onSelect, onAddPlayer, betAmount = 1, compact = false }) {
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -32,6 +32,91 @@ function PlayerSelector({ players = [], selectedPlayerId, onSelect, onAddPlayer,
     }
   };
 
+  // Compact mode for navbar
+  if (compact) {
+    return (
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedPlayerId || ''}
+            onChange={(e) => onSelect(e.target.value || null)}
+            className="bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-lg text-sm px-3 py-2 text-white transition-colors"
+            style={{ appearance: 'auto', maxWidth: '160px' }}
+          >
+            <option value="">Select Player</option>
+            {players.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.firstName} {p.lastName}
+              </option>
+            ))}
+          </select>
+
+          {!showJoinForm && (
+            <button
+              onClick={() => setShowJoinForm(true)}
+              className="btn-success text-xs whitespace-nowrap"
+              style={{ padding: '6px 10px' }}
+            >
+              + Join
+            </button>
+          )}
+        </div>
+
+        {/* Compact Join Form - dropdown */}
+        {showJoinForm && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => { setShowJoinForm(false); setError(''); }}
+            />
+            <form onSubmit={handleJoin} className="absolute top-full mt-1 right-0 w-64 bg-gray-800 rounded-lg border border-gray-700 shadow-xl z-20 p-3">
+              <div className="text-[10px] text-gray-500 font-semibold tracking-wider mb-2">JOIN GAME</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="input-field flex-1 text-sm"
+                  autoFocus
+                />
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="input-field flex-1 text-sm"
+                />
+              </div>
+              {error && (
+                <div className="text-red-400 text-xs mt-2">{error}</div>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="submit"
+                  className="btn-success text-xs flex-1"
+                  disabled={loading || !firstName.trim() || !lastName.trim()}
+                  style={{ padding: '6px 10px' }}
+                >
+                  {loading ? 'Joining...' : 'Join'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowJoinForm(false); setError(''); }}
+                  className="btn-secondary text-xs"
+                  style={{ padding: '6px 10px' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Full mode (original)
   return (
     <div className="card">
       <div className="flex items-center gap-3">

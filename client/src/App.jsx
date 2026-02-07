@@ -1,6 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { GameProvider } from './context/GameContext';
-import GameSelector from './components/GameSelector';
+import { GameProvider, useGameContext } from './context/GameContext';
+import { useGameData } from './hooks/useGameData';
+import PlayerSelector from './components/PlayerSelector';
 import PlayerPage from './pages/PlayerPage';
 import AdminPage from './pages/AdminPage';
 import DisplayPage from './pages/DisplayPage';
@@ -8,6 +9,8 @@ import DisplayPage from './pages/DisplayPage';
 function AppContent() {
   const location = useLocation();
   const isDisplayMode = location.pathname === '/display';
+  const { currentGameId, selectedPlayerId, selectPlayer } = useGameContext();
+  const { gameData, addPlayer } = useGameData(3000, currentGameId);
 
   // Hide navigation in display mode for cleaner TV view
   if (isDisplayMode) {
@@ -20,30 +23,33 @@ function AppContent() {
     { to: '/display', label: 'TV' },
   ];
 
+  const players = gameData?.players || [];
+
   return (
     <div className="min-h-screen nbc-app-bg">
       {/* Navigation */}
       <nav className="nbc-nav">
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-12 sm:h-14">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <span className="text-sm sm:text-lg font-extrabold tracking-widest nbc-nav-title">
-                <span className="hidden sm:inline">SUPER BOWL PARTY</span>
-                <span className="sm:hidden">SB PARTY</span>
-              </span>
-              <div className="flex gap-0.5">
-                {navLinks.map(({ to, label }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={`nbc-nav-link ${location.pathname === to ? 'nbc-nav-link-active' : ''}`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
+            <div className="flex items-center gap-0.5">
+              {navLinks.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`nbc-nav-link ${location.pathname === to ? 'nbc-nav-link-active' : ''}`}
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
-            <GameSelector compact showCreateButton={location.pathname === '/admin'} />
+            <PlayerSelector
+              compact
+              players={players}
+              selectedPlayerId={selectedPlayerId}
+              onSelect={selectPlayer}
+              onAddPlayer={addPlayer}
+              betAmount={gameData?.betAmount}
+            />
           </div>
         </div>
       </nav>

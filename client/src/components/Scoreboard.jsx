@@ -1,6 +1,6 @@
 import { formatCurrency, getQuarterName } from '../utils/helpers';
 
-function Scoreboard({ gameData, displayMode = false }) {
+function Scoreboard({ gameData, displayMode = false, compact = false }) {
   const { teams, scores, quarters, gameStatus } = gameData;
 
   // Determine game status label
@@ -13,6 +13,62 @@ function Scoreboard({ gameData, displayMode = false }) {
     statusLabel = 'FINAL';
   } else if (gameStatus === 'active') {
     statusLabel = 'GAME ACTIVE';
+  }
+
+  if (compact) {
+    return (
+      <div className="nbc-scoreboard" style={{ opacity: 0.85 }}>
+        <div className="nbc-scoreboard-header text-[10px] py-1">{statusLabel}</div>
+
+        {/* Compact Score Display */}
+        <div className="flex justify-center items-center gap-4 sm:gap-6 py-2 px-4">
+          <div className="text-center flex-1">
+            <div className="text-[10px] sm:text-xs font-bold text-gray-400 tracking-wider">
+              {teams.away.abbreviation || teams.away.name}
+            </div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {scores.away}
+            </div>
+          </div>
+
+          <div className="text-gray-600 text-sm font-light">vs</div>
+
+          <div className="text-center flex-1">
+            <div className="text-[10px] sm:text-xs font-bold text-gray-400 tracking-wider">
+              {teams.home.abbreviation || teams.home.name}
+            </div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {scores.home}
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Quarter Prizes */}
+        <div className="grid grid-cols-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+          {Object.entries(quarters).map(([key, quarter]) => (
+            <div
+              key={key}
+              className={`text-center py-1.5 px-1 ${
+                quarter.completed ? 'bg-green-900/30' : ''
+              }`}
+              style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="text-[9px] sm:text-[10px] text-gray-500 font-semibold tracking-wider uppercase">
+                {getQuarterName(key)}
+              </div>
+              <div className="text-[10px] sm:text-xs font-bold" style={{ color: 'var(--nbc-gold)' }}>
+                {formatCurrency(quarter.prize)}
+              </div>
+              {quarter.completed && quarter.winner && (
+                <div className="text-[9px] sm:text-[10px] text-green-400 truncate font-semibold">
+                  {quarter.winner.player}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

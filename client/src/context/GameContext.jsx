@@ -5,6 +5,7 @@ const GameContext = createContext(null);
 export function GameProvider({ children }) {
   const [games, setGames] = useState([]);
   const [currentGameId, setCurrentGameId] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerIdRaw] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -113,6 +114,26 @@ export function GameProvider({ children }) {
     }
   };
 
+  // Player selection - persisted per game in localStorage
+  const selectPlayer = useCallback((playerId) => {
+    setSelectedPlayerIdRaw(playerId);
+    if (currentGameId) {
+      if (playerId) {
+        localStorage.setItem(`selectedPlayer_${currentGameId}`, playerId);
+      } else {
+        localStorage.removeItem(`selectedPlayer_${currentGameId}`);
+      }
+    }
+  }, [currentGameId]);
+
+  // Restore selected player when game changes
+  useEffect(() => {
+    if (currentGameId) {
+      const stored = localStorage.getItem(`selectedPlayer_${currentGameId}`);
+      setSelectedPlayerIdRaw(stored || null);
+    }
+  }, [currentGameId]);
+
   // Switch to a different game
   const switchGame = (gameId) => {
     setCurrentGameId(gameId);
@@ -125,6 +146,8 @@ export function GameProvider({ children }) {
     games,
     currentGameId,
     currentGame,
+    selectedPlayerId,
+    selectPlayer,
     loading,
     error,
     createGame,
