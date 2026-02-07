@@ -26,7 +26,15 @@ function resolveGameId(gameId) {
 // Read game data
 export function getGameData(gameId) {
   const resolvedId = resolveGameId(gameId);
-  return getGame(resolvedId);
+  const data = getGame(resolvedId);
+  // Ensure players and bets arrays exist for backwards compatibility
+  if (!data.players) {
+    data.players = [];
+  }
+  if (!data.bets) {
+    data.bets = [];
+  }
+  return data;
 }
 
 // Write game data
@@ -47,16 +55,13 @@ export function resetGame(gameId) {
   const resolvedId = resolveGameId(gameId);
   const gameData = getGame(resolvedId);
 
-  // Keep the id, name, betAmount, and prizeDistribution, reset everything else
+  // Keep configuration (id, name, betAmount, prizeDistribution, teams, players), reset game state
   const distribution = gameData.prizeDistribution || DEFAULT_PRIZE_DISTRIBUTION;
   const prizes = calculatePrizes(gameData.betAmount, distribution);
 
   const resetData = {
     ...gameData,
-    teams: {
-      home: { name: 'Team A', abbreviation: 'TMA' },
-      away: { name: 'Team B', abbreviation: 'TMB' }
-    },
+    // Preserve teams — they are configuration, not game state
     grid: {
       locked: false,
       squares: Array(100).fill(null),
@@ -73,7 +78,8 @@ export function resetGame(gameId) {
       q3: { completed: false, winner: null, prize: prizes.q3 },
       q4: { completed: false, winner: null, prize: prizes.q4 }
     },
-    gameStatus: 'setup'
+    gameStatus: 'setup',
+    bets: []
   };
 
   return saveGame(resetData);
@@ -113,13 +119,19 @@ export function claimSquare(index, playerName, gameId) {
 // Bulk claim squares - distribute remaining squares evenly among participants
 export function bulkClaimSquares(initialsList, gameId) {
   const data = getGameData(gameId);
+  ensurePlayers(data);
 
   if (data.grid.locked) {
     throw new Error('Grid is locked');
   }
 
+  // If no initials provided, use registered players
   if (!initialsList || initialsList.length === 0) {
-    throw new Error('No participants provided');
+    if (data.players.length > 0) {
+      initialsList = data.players.map(p => p.initials);
+    } else {
+      throw new Error('No participants provided');
+    }
   }
 
   // Validate all initials
@@ -340,6 +352,267 @@ export function getPlayerStats(gameId) {
   };
 
   return { players, totals };
+}
+
+// --- Player Management ---
+
+// Ensure players array exists on game data (backwards compat)
+function ensurePlayers(data) {
+  if (!data.players) {
+    data.players = [];
+  }
+  return data;
+}
+
+// Generate unique player ID
+function generatePlayerId() {
+  return `p_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+}
+
+// Derive initials from first + last name, handling conflicts
+function deriveInitials(firstName, lastName, existingInitials) {
+  const base = (firstName[0] + lastName[0]).toUpperCase();
+
+  if (!existingInitials.includes(base)) {
+    return base;
+  }
+
+  // Try first letter + first 2 of last name
+  const three = (firstName[0] + lastName.slice(0, 2)).toUpperCase();
+  if (!existingInitials.includes(three)) {
+    return three;
+  }
+
+  // Try first 2 of first + first of last
+  const alt = (firstName.slice(0, 2) + lastName[0]).toUpperCase();
+  if (!existingInitials.includes(alt)) {
+    return alt;
+  }
+
+  // Append number
+  for (let i = 2; i <= 9; i++) {
+    const numbered = base + i;
+    if (!existingInitials.includes(numbered)) {
+      return numbered;
+    }
+  }
+
+  return base + Math.floor(Math.random() * 100);
+}
+
+// Add a player to a game
+export function addPlayer(firstName, lastName, gameId) {
+  const data = getGameData(gameId);
+  ensurePlayers(data);
+
+  if (!firstName || !lastName) {
+    throw new Error('First name and last name are required');
+  }
+
+  const cleanFirst = firstName.trim();
+  const cleanLast = lastName.trim();
+
+  if (cleanFirst.length === 0 || cleanLast.length === 0) {
+    throw new Error('First name and last name cannot be empty');
+  }
+
+  const existingInitials = data.players.map(p => p.initials);
+  const initials = deriveInitials(cleanFirst, cleanLast, existingInitials);
+
+  const player = {
+    id: generatePlayerId(),
+    firstName: cleanFirst,
+    lastName: cleanLast,
+    initials,
+    createdAt: new Date().toISOString()
+  };
+
+  data.players.push(player);
+  saveGameData(data);
+
+  return player;
+}
+
+// Remove a player from a game (does not clear their squares)
+export function removePlayer(playerId, gameId) {
+  const data = getGameData(gameId);
+  ensurePlayers(data);
+
+  const index = data.players.findIndex(p => p.id === playerId);
+  if (index === -1) {
+    throw new Error('Player not found');
+  }
+
+  const removed = data.players.splice(index, 1)[0];
+  saveGameData(data);
+
+  return removed;
+}
+
+// Get all players for a game
+export function getPlayers(gameId) {
+  const data = getGameData(gameId);
+  ensurePlayers(data);
+  return data.players;
+}
+
+// --- Bet Management ---
+
+function ensureBets(data) {
+  if (!data.bets) {
+    data.bets = [];
+  }
+  return data;
+}
+
+function generateBetId() {
+  return `bet_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+}
+
+// Calculate profit from American odds and wager
+function calculateBetPayout(odds, wager) {
+  if (odds < 0) {
+    return wager * (100 / Math.abs(odds));
+  } else {
+    return wager * (odds / 100);
+  }
+}
+
+// Place a bet
+export function placeBet(gameId, playerId, betData) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+
+  const player = data.players.find(p => p.id === playerId);
+  if (!player) throw new Error('Player not found');
+
+  const { type, description, selection, wager } = betData;
+  if (!type || !description || !selection || !wager) {
+    throw new Error('Missing required bet fields');
+  }
+  if (wager <= 0) throw new Error('Wager must be positive');
+  if (wager < 0.25) throw new Error('Minimum wager is $0.25');
+
+  const potentialPayout = calculateBetPayout(selection.odds, wager);
+  if (potentialPayout > 10.01) {
+    throw new Error('Bet exceeds maximum $10 payout');
+  }
+
+  const bet = {
+    id: generateBetId(),
+    playerId,
+    playerInitials: player.initials,
+    type,
+    description,
+    selection,
+    wager: Math.round(wager * 100) / 100,
+    potentialPayout: Math.round(potentialPayout * 100) / 100,
+    status: 'pending',
+    result: null,
+    createdAt: new Date().toISOString(),
+    settledAt: null
+  };
+
+  data.bets.push(bet);
+  saveGameData(data);
+  return bet;
+}
+
+// Get bets, optionally filtered by player
+export function getBets(gameId, playerId = null) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+  if (playerId) {
+    return data.bets.filter(b => b.playerId === playerId);
+  }
+  return data.bets;
+}
+
+// Settle a single bet
+export function settleBet(gameId, betId, outcome) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+
+  const bet = data.bets.find(b => b.id === betId);
+  if (!bet) throw new Error('Bet not found');
+  if (bet.status !== 'pending') throw new Error('Bet already settled');
+
+  bet.status = outcome;
+  bet.settledAt = new Date().toISOString();
+  bet.result = {
+    payout: outcome === 'won' ? bet.potentialPayout : 0
+  };
+
+  saveGameData(data);
+  return bet;
+}
+
+// Get bet statistics for admin dashboard
+export function getBetStats(gameId) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+
+  const bets = data.bets;
+  const players = data.players;
+
+  const playerBetStats = {};
+  bets.forEach(bet => {
+    if (!playerBetStats[bet.playerId]) {
+      const player = players.find(p => p.id === bet.playerId);
+      playerBetStats[bet.playerId] = {
+        playerId: bet.playerId,
+        initials: bet.playerInitials,
+        name: player ? `${player.firstName} ${player.lastName}` : bet.playerInitials,
+        totalWagered: 0,
+        totalWon: 0,
+        totalLost: 0,
+        pendingWagers: 0,
+        pendingPotentialPayout: 0,
+        betsPlaced: 0,
+        betsWon: 0,
+        betsLost: 0,
+        betsPending: 0
+      };
+    }
+    const ps = playerBetStats[bet.playerId];
+    ps.betsPlaced++;
+    ps.totalWagered += bet.wager;
+
+    if (bet.status === 'pending') {
+      ps.betsPending++;
+      ps.pendingWagers += bet.wager;
+      ps.pendingPotentialPayout += bet.potentialPayout;
+    } else if (bet.status === 'won') {
+      ps.betsWon++;
+      ps.totalWon += bet.potentialPayout;
+    } else if (bet.status === 'lost') {
+      ps.betsLost++;
+      ps.totalLost += bet.wager;
+    }
+  });
+
+  const totalPendingLiability = bets
+    .filter(b => b.status === 'pending')
+    .reduce((sum, b) => sum + b.potentialPayout, 0);
+
+  const houseProfit = bets
+    .filter(b => b.status === 'lost')
+    .reduce((sum, b) => sum + b.wager, 0)
+    - bets
+    .filter(b => b.status === 'won')
+    .reduce((sum, b) => sum + b.potentialPayout, 0);
+
+  return {
+    players: Object.values(playerBetStats),
+    totals: {
+      totalBets: bets.length,
+      pendingBets: bets.filter(b => b.status === 'pending').length,
+      settledBets: bets.filter(b => b.status !== 'pending').length,
+      totalWagered: Math.round(bets.reduce((s, b) => s + b.wager, 0) * 100) / 100,
+      totalPendingLiability: Math.round(totalPendingLiability * 100) / 100,
+      houseProfit: Math.round(houseProfit * 100) / 100
+    }
+  };
 }
 
 // Export for backwards compatibility

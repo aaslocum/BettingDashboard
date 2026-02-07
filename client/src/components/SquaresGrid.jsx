@@ -13,7 +13,8 @@ function SquaresGrid({
   onSquareClick,
   displayMode = false,
   showLikelihood = true,
-  gameContext = {}
+  gameContext = {},
+  currentPlayerInitials = null
 }) {
   const { grid, teams, scores } = gameData;
   const { squares, homeNumbers, awayNumbers, locked } = grid;
@@ -159,12 +160,14 @@ function SquaresGrid({
               const isHovered = hoveredSquare === index;
               const likelihoodData = likelihoodMap?.get(index);
 
+              const isCurrentPlayer = currentPlayerInitials && squares[index] === currentPlayerInitials;
+
               return (
                 <div
                   key={`square-${index}`}
-                  className={`${getSquareClass(index)} transition-all duration-300 ${isHovered ? 'ring-2 ring-white ring-opacity-50' : ''}`}
+                  className={`${getSquareClass(index)} transition-all duration-300 ${isHovered ? 'ring-2 ring-white ring-opacity-50' : ''} ${isCurrentPlayer ? 'ring-2 ring-yellow-400/70' : ''}`}
                   style={getSquareStyle(index)}
-                  onClick={() => !locked && !squares[index] && onSquareClick?.(index)}
+                  onClick={() => onSquareClick?.(index)}
                   onMouseEnter={() => setHoveredSquare(index)}
                   onMouseLeave={() => setHoveredSquare(null)}
                   title={getTooltipContent(index)}

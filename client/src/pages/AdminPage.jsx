@@ -5,11 +5,12 @@ import SquaresGrid from '../components/SquaresGrid';
 import PlayerStats from '../components/PlayerStats';
 import BulkAssignModal from '../components/BulkAssignModal';
 import GameSelector from '../components/GameSelector';
+import BetsAdmin from '../components/BetsAdmin';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
   const { currentGameId, currentGame, deleteGame, updateGame, games } = useGameContext();
-  const { gameData, loading, error, refetch } = useGameData(5000, currentGameId);
+  const { gameData, loading, error, refetch, addPlayer, removePlayer } = useGameData(5000, currentGameId);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [syncStatus, setSyncStatus] = useState(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
@@ -110,6 +111,30 @@ function AdminPage() {
             }}
           />
 
+          {/* Player Management */}
+          <PlayersControl
+            players={gameData.players || []}
+            squares={gameData.grid.squares}
+            onAddPlayer={async (firstName, lastName) => {
+              try {
+                await addPlayer(firstName, lastName);
+                showMessage(`Added ${firstName} ${lastName}`);
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
+            onRemovePlayer={async (playerId, playerName) => {
+              if (confirm(`Remove ${playerName} from the game? Their squares will NOT be cleared.`)) {
+                try {
+                  await removePlayer(playerId);
+                  showMessage(`Removed ${playerName}`);
+                } catch (err) {
+                  showMessage(err.message, 'error');
+                }
+              }
+            }}
+          />
+
           {/* Auto-Sync Control - Primary control for hands-off operation */}
           <AutoSyncControl
             syncStatus={syncStatus}
@@ -161,6 +186,9 @@ function AdminPage() {
               showMessage(`${getQuarterName(quarter)} winner recorded`);
             }}
           />
+
+          {/* Betting Ledger */}
+          <BetsAdmin gameId={currentGameId} />
 
           {/* Demo Score Controls */}
           <DemoScoreControl
@@ -217,6 +245,7 @@ function AdminPage() {
       {showBulkAssignModal && (
         <BulkAssignModal
           remainingSquares={100 - gameData.grid.squares.filter(s => s !== null).length}
+          players={gameData.players || []}
           onAssign={async (initialsList) => {
             const response = await fetch('/api/game/bulk-claim', {
               method: 'POST',
@@ -796,6 +825,102 @@ function DemoScoreControl({ teams, scores, onUpdateScores, gridLocked }) {
           <span className="text-red-400">{localScores.home % 10}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlayersControl({ players, squares, onAddPlayer, onRemovePlayer }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!firstName.trim() || !lastName.trim()) return;
+    setAdding(true);
+    try {
+      await onAddPlayer(firstName.trim(), lastName.trim());
+      setFirstName('');
+      setLastName('');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // Count squares per player initials
+  const squareCounts = {};
+  squares.forEach(s => {
+    if (s) squareCounts[s] = (squareCounts[s] || 0) + 1;
+  });
+
+  return (
+    <div className="card">
+      <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>
+        Players ({players.length})
+      </h2>
+
+      {/* Add Player Form */}
+      <form onSubmit={handleAdd} className="flex gap-2 mb-3">
+        <input
+          type="text"
+          placeholder="First"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="input-field flex-1 text-sm"
+        />
+        <input
+          type="text"
+          placeholder="Last"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="input-field flex-1 text-sm"
+        />
+        <button
+          type="submit"
+          className="btn-success text-xs whitespace-nowrap"
+          disabled={adding || !firstName.trim() || !lastName.trim()}
+          style={{ padding: '6px 12px' }}
+        >
+          {adding ? '...' : 'Add'}
+        </button>
+      </form>
+
+      {/* Players List */}
+      {players.length === 0 ? (
+        <p className="text-xs text-gray-500 text-center py-2">
+          No players registered yet. Add players above or they can self-register on the Play page.
+        </p>
+      ) : (
+        <div className="space-y-1 max-h-[250px] overflow-y-auto">
+          {players.map(player => (
+            <div
+              key={player.id}
+              className="flex items-center justify-between py-1.5 px-2 rounded text-sm"
+              style={{ background: 'rgba(0,0,0,0.15)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-bold text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
+                  {player.initials}
+                </span>
+                <span className="truncate text-gray-300">
+                  {player.firstName} {player.lastName}
+                </span>
+                {squareCounts[player.initials] > 0 && (
+                  <span className="text-xs text-gray-500">
+                    ({squareCounts[player.initials]} sq)
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => onRemovePlayer(player.id, `${player.firstName} ${player.lastName}`)}
+                className="text-red-400 hover:text-red-300 text-xs ml-2 flex-shrink-0"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

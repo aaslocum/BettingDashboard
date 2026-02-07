@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatOdds, getOddsColorClass } from '../utils/helpers';
 
-function PlayerPropsDisplay({ propsData, displayMode = false }) {
+function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   if (!propsData?.games?.[0]?.props || propsData.games[0].props.length === 0) {
@@ -156,7 +156,19 @@ function PlayerPropsDisplay({ propsData, displayMode = false }) {
             </div>
             <div className="space-y-1">
               {playerProps.map((prop, idx) => (
-                <div key={idx} className="flex justify-between items-center text-sm">
+                <div
+                  key={idx}
+                  className={`flex justify-between items-center text-sm ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-1 py-0.5 transition-colors' : ''}`}
+                  onClick={onBetClick ? () => onBetClick({
+                    type: 'prop',
+                    market: prop.marketName,
+                    outcome: prop.player,
+                    odds: prop.odds,
+                    point: prop.line,
+                    name: prop.name,
+                    description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
+                  }) : undefined}
+                >
                   <span className="text-gray-400">
                     {prop.marketName}
                     {prop.line !== null && (

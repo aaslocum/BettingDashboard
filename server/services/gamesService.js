@@ -87,6 +87,7 @@ function createDefaultGameState(options = {}) {
     betAmount,
     totalPool: betAmount * 100,
     prizeDistribution: validatedDistribution,
+    players: [],
     teams: {
       home: { name: 'Team A', abbreviation: 'TMA' },
       away: { name: 'Team B', abbreviation: 'TMB' }

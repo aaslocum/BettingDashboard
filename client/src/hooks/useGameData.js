@@ -43,7 +43,56 @@ export function useGameData(refreshInterval = 5000, gameId = null) {
     return data;
   };
 
-  return { gameData, loading, error, refetch: fetchData, claimSquare };
+  const addPlayer = async (firstName, lastName) => {
+    const response = await fetch('/api/game/players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, gameId })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error);
+    }
+
+    const data = await response.json();
+    // Refresh game data to get updated players list
+    await fetchData();
+    return data.player;
+  };
+
+  const removePlayer = async (playerId) => {
+    const url = gameId
+      ? `/api/game/players/${playerId}?gameId=${gameId}`
+      : `/api/game/players/${playerId}`;
+    const response = await fetch(url, { method: 'DELETE' });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error);
+    }
+
+    const data = await response.json();
+    await fetchData();
+    return data.removed;
+  };
+
+  const placeBet = async (playerId, betData) => {
+    const response = await fetch('/api/game/bets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...betData, playerId, gameId })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error);
+    }
+
+    return (await response.json()).bet;
+  };
+
+  return { gameData, loading, error, refetch: fetchData, claimSquare, addPlayer, removePlayer, placeBet };
 }
 
 export function useOddsData(refreshInterval = 30000) {
@@ -156,4 +205,47 @@ export function usePlayerGameStats(refreshInterval = 15000) {
   }, [fetchData, refreshInterval]);
 
   return { playerGameStats, loading, error, refetch: fetchData };
+}
+
+export function useBets(refreshInterval = 10000, gameId = null, playerId = null) {
+  const [bets, setBets] = useState([]);
+  const [betStats, setBetStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchBets = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (gameId) params.append('gameId', gameId);
+      if (playerId) params.append('playerId', playerId);
+      const response = await fetch(`/api/game/bets?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBets(data.bets || []);
+      }
+    } catch (err) { /* silent */ }
+    finally { setLoading(false); }
+  }, [gameId, playerId]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (gameId) params.append('gameId', gameId);
+      const response = await fetch(`/api/game/bets/stats?${params}`);
+      if (response.ok) {
+        setBetStats(await response.json());
+      }
+    } catch (err) { /* silent */ }
+  }, [gameId]);
+
+  useEffect(() => {
+    fetchBets();
+    fetchStats();
+    const interval = setInterval(() => {
+      fetchBets();
+      fetchStats();
+    }, refreshInterval);
+    return () => clearInterval(interval);
+  }, [fetchBets, fetchStats, refreshInterval]);
+
+  return { bets, betStats, loading, refetchBets: fetchBets, refetchStats: fetchStats };
 }

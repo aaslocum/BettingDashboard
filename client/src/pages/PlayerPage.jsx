@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { useGameData, useOddsData, usePlayerProps, useTeamStats, usePlayerGameStats } from '../hooks/useGameData';
+import { useState, useEffect } from 'react';
+import { useGameData, useOddsData, usePlayerProps, useTeamStats, usePlayerGameStats, useBets } from '../hooks/useGameData';
 import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
 import Scoreboard from '../components/Scoreboard';
-import ClaimModal from '../components/ClaimModal';
+import PlayerSelector from '../components/PlayerSelector';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
+import BetSlipModal from '../components/BetSlipModal';
+import MyBets from '../components/MyBets';
 import { formatCurrency } from '../utils/helpers';
 
 // Build game context for likelihood calculations
@@ -33,12 +35,65 @@ function buildGameContext(gameData) {
 
 function PlayerPage() {
   const { currentGameId, currentGame } = useGameContext();
-  const { gameData, loading, error, claimSquare } = useGameData(3000, currentGameId);
+  const { gameData, loading, error, claimSquare, addPlayer, placeBet } = useGameData(3000, currentGameId);
   const { oddsData } = useOddsData(30000);
   const { propsData } = usePlayerProps(60000);
   const { teamStats } = useTeamStats(15000);
   const { playerGameStats } = usePlayerGameStats(15000);
-  const [selectedSquare, setSelectedSquare] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [claimError, setClaimError] = useState('');
+  const [betSlip, setBetSlip] = useState(null);
+
+  // Persist selected player in localStorage per game
+  useEffect(() => {
+    if (currentGameId) {
+      const stored = localStorage.getItem(`selectedPlayer_${currentGameId}`);
+      if (stored) setSelectedPlayerId(stored);
+    }
+  }, [currentGameId]);
+
+  const handleSelectPlayer = (playerId) => {
+    setSelectedPlayerId(playerId);
+    if (currentGameId) {
+      if (playerId) {
+        localStorage.setItem(`selectedPlayer_${currentGameId}`, playerId);
+      } else {
+        localStorage.removeItem(`selectedPlayer_${currentGameId}`);
+      }
+    }
+  };
+
+  const { bets: myBets, refetchBets } = useBets(10000, currentGameId, selectedPlayerId);
+
+  const handleBetClick = (betInfo) => {
+    if (!selectedPlayer) {
+      setClaimError('Select your player first to place a bet');
+      setTimeout(() => setClaimError(''), 3000);
+      return;
+    }
+    setBetSlip(betInfo);
+  };
+
+  const handlePlaceBet = async (wager) => {
+    if (!selectedPlayer || !betSlip) return;
+    try {
+      await placeBet(selectedPlayer.id, {
+        type: betSlip.type,
+        description: betSlip.description,
+        selection: {
+          market: betSlip.market,
+          outcome: betSlip.outcome,
+          odds: betSlip.odds,
+          point: betSlip.point ?? null,
+        },
+        wager,
+      });
+      setBetSlip(null);
+      refetchBets();
+    } catch (err) {
+      throw err;
+    }
+  };
 
   if (loading) {
     return (
@@ -59,14 +114,25 @@ function PlayerPage() {
 
   if (!gameData) return null;
 
-  const handleSquareClick = (index) => {
-    if (!gameData.grid.locked && !gameData.grid.squares[index]) {
-      setSelectedSquare(index);
-    }
-  };
+  const players = gameData.players || [];
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId);
 
-  const handleClaim = async (index, playerName) => {
-    await claimSquare(index, playerName);
+  const handleSquareClick = async (index) => {
+    if (gameData.grid.locked || gameData.grid.squares[index]) return;
+
+    if (!selectedPlayer) {
+      setClaimError('Select your player first');
+      setTimeout(() => setClaimError(''), 3000);
+      return;
+    }
+
+    try {
+      setClaimError('');
+      await claimSquare(index, selectedPlayer.initials);
+    } catch (err) {
+      setClaimError(err.message);
+      setTimeout(() => setClaimError(''), 3000);
+    }
   };
 
   return (
@@ -82,6 +148,20 @@ function PlayerPage() {
           </p>
         )}
       </header>
+
+      {/* Player Selector */}
+      <PlayerSelector
+        players={players}
+        selectedPlayerId={selectedPlayerId}
+        onSelect={handleSelectPlayer}
+        onAddPlayer={addPlayer}
+        betAmount={gameData.betAmount}
+      />
+
+      {/* Claim Error */}
+      {claimError && (
+        <div className="text-center text-sm text-red-400 font-semibold">{claimError}</div>
+      )}
 
       {/* Scoreboard */}
       <Scoreboard gameData={gameData} />
@@ -102,10 +182,13 @@ function PlayerPage() {
           onSquareClick={handleSquareClick}
           showLikelihood={gameData.grid.locked}
           gameContext={buildGameContext(gameData)}
+          currentPlayerInitials={selectedPlayer?.initials}
         />
         {!gameData.grid.locked && (
           <p className="text-center text-xs text-gray-500 mt-3">
-            Tap an empty square to claim it
+            {selectedPlayer
+              ? `Tap an empty square to claim as ${selectedPlayer.initials}`
+              : 'Select your player above, then tap a square to claim it'}
           </p>
         )}
       </section>
@@ -122,18 +205,23 @@ function PlayerPage() {
       {/* Player Game Stats Section */}
       <MobilePlayerGameStats playerGameStats={playerGameStats} />
 
+      {/* My Bets */}
+      {selectedPlayer && myBets && myBets.length > 0 && (
+        <MyBets bets={myBets} />
+      )}
+
       {/* Game Odds */}
-      <OddsDisplay oddsData={oddsData} />
+      <OddsDisplay oddsData={oddsData} onBetClick={handleBetClick} />
 
       {/* Player Props */}
-      <PlayerPropsDisplay propsData={propsData} />
+      <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} />
 
-      {/* Claim Modal */}
-      {selectedSquare !== null && (
-        <ClaimModal
-          squareIndex={selectedSquare}
-          onClaim={handleClaim}
-          onClose={() => setSelectedSquare(null)}
+      {/* Bet Slip Modal */}
+      {betSlip && (
+        <BetSlipModal
+          bet={betSlip}
+          onPlace={handlePlaceBet}
+          onClose={() => setBetSlip(null)}
         />
       )}
     </div>

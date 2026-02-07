@@ -11,6 +11,24 @@ export function getOddsColorClass(price) {
   return 'text-gray-400';
 }
 
+// Calculate profit from American odds and wager amount
+export function calculatePayout(odds, wager) {
+  if (odds < 0) {
+    return wager * (100 / Math.abs(odds));
+  } else {
+    return wager * (odds / 100);
+  }
+}
+
+// Calculate max wager that keeps payout at or below maxPayout
+export function calculateMaxWager(odds, maxPayout = 10) {
+  if (odds < 0) {
+    return Math.floor((maxPayout * Math.abs(odds) / 100) * 100) / 100;
+  } else {
+    return Math.floor((maxPayout * 100 / odds) * 100) / 100;
+  }
+}
+
 // Calculate grid position from index
 export function getGridPosition(index) {
   return {

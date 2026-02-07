@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats } from '../services/dataService.js';
+import { getGameData, claimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, getBetStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -77,14 +77,112 @@ router.post('/bulk-claim', (req, res) => {
   try {
     const { initialsList, gameId } = req.body;
 
-    if (!initialsList || !Array.isArray(initialsList) || initialsList.length === 0) {
-      return res.status(400).json({ error: 'initialsList array required' });
-    }
-
-    const result = bulkClaimSquares(initialsList, gameId);
+    // Allow empty/null initialsList — dataService will auto-use registered players
+    const result = bulkClaimSquares(initialsList || [], gameId);
     res.json(result);
   } catch (error) {
     console.error('Error bulk claiming squares:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// --- Player Management ---
+
+// GET /api/game/players - Get all players for current game
+router.get('/players', (req, res) => {
+  try {
+    const gameId = req.query.gameId;
+    const players = getPlayers(gameId);
+    res.json({ players });
+  } catch (error) {
+    console.error('Error getting players:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/game/players - Add a player to the game
+router.post('/players', (req, res) => {
+  try {
+    const { firstName, lastName, gameId } = req.body;
+
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'firstName and lastName are required' });
+    }
+
+    const player = addPlayer(firstName, lastName, gameId);
+    res.status(201).json({ player });
+  } catch (error) {
+    console.error('Error adding player:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// DELETE /api/game/players/:playerId - Remove a player from the game
+router.delete('/players/:playerId', (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const gameId = req.query.gameId;
+    const removed = removePlayer(playerId, gameId);
+    res.json({ removed });
+  } catch (error) {
+    console.error('Error removing player:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// --- Bet Management ---
+
+// POST /api/game/bets - Place a bet
+router.post('/bets', (req, res) => {
+  try {
+    const { gameId, playerId, type, description, selection, wager } = req.body;
+    if (!playerId || !type || !selection || !wager) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const bet = placeBet(gameId, playerId, { type, description, selection, wager });
+    res.status(201).json({ bet });
+  } catch (error) {
+    console.error('Error placing bet:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// GET /api/game/bets - Get bets (optionally filtered by playerId)
+router.get('/bets', (req, res) => {
+  try {
+    const { gameId, playerId } = req.query;
+    const bets = getBets(gameId, playerId || null);
+    res.json({ bets });
+  } catch (error) {
+    console.error('Error getting bets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/game/bets/stats - Get bet statistics for admin
+router.get('/bets/stats', (req, res) => {
+  try {
+    const { gameId } = req.query;
+    const stats = getBetStats(gameId);
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting bet stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/game/bets/:betId/settle - Settle a single bet
+router.post('/bets/:betId/settle', (req, res) => {
+  try {
+    const { betId } = req.params;
+    const { gameId, outcome } = req.body;
+    if (!['won', 'lost', 'push'].includes(outcome)) {
+      return res.status(400).json({ error: 'outcome must be won, lost, or push' });
+    }
+    const bet = settleBet(gameId, betId, outcome);
+    res.json({ bet });
+  } catch (error) {
+    console.error('Error settling bet:', error);
     res.status(400).json({ error: error.message });
   }
 });

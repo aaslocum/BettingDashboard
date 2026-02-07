@@ -1,6 +1,6 @@
 import { formatOdds, getOddsColorClass } from '../utils/helpers';
 
-function OddsDisplay({ oddsData, displayMode = false }) {
+function OddsDisplay({ oddsData, displayMode = false, onBetClick }) {
   if (!oddsData || !oddsData.games || oddsData.games.length === 0) {
     return (
       <div className="card text-center">
@@ -50,7 +50,18 @@ function OddsDisplay({ oddsData, displayMode = false }) {
           <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">MONEYLINE</div>
           <div className="flex justify-around">
             {h2h.outcomes?.map((o) => (
-              <div key={o.name} className="text-center">
+              <div
+                key={o.name}
+                className={`text-center ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-3 py-1 transition-colors' : ''}`}
+                onClick={onBetClick ? () => onBetClick({
+                  type: 'moneyline',
+                  market: 'h2h',
+                  outcome: o.name,
+                  odds: o.price,
+                  point: null,
+                  description: `${o.name} Moneyline`
+                }) : undefined}
+              >
                 <div className="text-xs text-gray-400">{o.name}</div>
                 <div className={`text-lg font-bold ${getOddsColorClass(o.price)}`}>
                   {formatOdds(o.price)}
@@ -67,7 +78,18 @@ function OddsDisplay({ oddsData, displayMode = false }) {
           <div className="rounded p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">SPREAD</div>
             {spreads.outcomes?.map((o) => (
-              <div key={o.name} className="flex justify-between text-sm mb-1">
+              <div
+                key={o.name}
+                className={`flex justify-between text-sm mb-1 ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-1 py-0.5 transition-colors' : ''}`}
+                onClick={onBetClick ? () => onBetClick({
+                  type: 'spread',
+                  market: 'spreads',
+                  outcome: o.name,
+                  odds: o.price,
+                  point: o.point,
+                  description: `${o.name} ${o.point > 0 ? '+' : ''}${o.point}`
+                }) : undefined}
+              >
                 <span className="text-gray-300 truncate">{o.name.split(' ').pop()}</span>
                 <span className="font-bold" style={{ color: 'var(--nbc-gold)' }}>
                   {o.point > 0 ? '+' : ''}{o.point}
@@ -81,7 +103,18 @@ function OddsDisplay({ oddsData, displayMode = false }) {
           <div className="rounded p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <div className="text-[10px] text-gray-600 mb-2 font-semibold tracking-wider">TOTAL</div>
             {totals.outcomes?.map((o) => (
-              <div key={o.name} className="flex justify-between text-sm mb-1">
+              <div
+                key={o.name}
+                className={`flex justify-between text-sm mb-1 ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-1 py-0.5 transition-colors' : ''}`}
+                onClick={onBetClick ? () => onBetClick({
+                  type: 'totals',
+                  market: 'totals',
+                  outcome: o.name,
+                  odds: o.price,
+                  point: o.point,
+                  description: `${o.name} ${o.point} Total Points`
+                }) : undefined}
+              >
                 <span className="text-gray-300">{o.name}</span>
                 <span className="text-blue-400 font-bold">{o.point}</span>
               </div>
