@@ -194,7 +194,7 @@ function DisplayPage() {
             <div className="p-1.5 text-center">
               <div className="text-[8px] text-gray-500 uppercase tracking-wider mb-0.5">Join the Game</div>
               <div className="inline-block p-1.5 rounded" style={{ background: 'white' }}>
-                <QRCodeSVG value={`${window.location.origin}/`} size={64} />
+                <QRCodeSVG value={`${window.location.origin}/`} size={128} />
               </div>
               <div className="text-[9px] text-gray-500 mt-0.5">{window.location.host}</div>
             </div>
