@@ -62,10 +62,13 @@ fi
 mkdir -p data/games
 
 echo "  Installing dependencies..."
-npm install --omit=dev 2>&1 | tail -1
+npm install 2>&1 | tail -1
 
 echo "  Building client..."
-npm run build 2>&1 | tail -1
+npm run build 2>&1 | tail -3
+
+echo "  Pruning dev dependencies..."
+npm prune --omit=dev 2>&1 | tail -1
 
 echo "  ✓ Build complete"
 REMOTE_SCRIPT

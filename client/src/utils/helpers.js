@@ -29,6 +29,38 @@ export function calculateMaxWager(odds, maxPayout = 10) {
   }
 }
 
+// --- Parlay Math ---
+
+// Convert American odds to decimal
+export function americanToDecimal(odds) {
+  if (odds < 0) {
+    return 1 + (100 / Math.abs(odds));
+  } else {
+    return 1 + (odds / 100);
+  }
+}
+
+// Convert decimal odds to American
+export function decimalToAmerican(decimal) {
+  if (decimal >= 2) {
+    return Math.round((decimal - 1) * 100);
+  } else {
+    return Math.round(-100 / (decimal - 1));
+  }
+}
+
+// Calculate combined parlay decimal odds from array of American odds
+export function calculateParlayDecimalOdds(americanOddsArray) {
+  return americanOddsArray.reduce((acc, odds) => acc * americanToDecimal(odds), 1);
+}
+
+// Calculate max wager for parlay given combined decimal odds and max payout
+export function calculateParlayMaxWager(combinedDecimalOdds, maxPayout = 100) {
+  const profit = combinedDecimalOdds - 1;
+  if (profit <= 0) return 0;
+  return Math.floor((maxPayout / profit) * 100) / 100;
+}
+
 // Calculate grid position from index
 export function getGridPosition(index) {
   return {

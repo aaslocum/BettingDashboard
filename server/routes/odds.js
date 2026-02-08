@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps } from '../services/oddsService.js';
+import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps, fetchHistoricalOdds } from '../services/oddsService.js';
+import { getOddsHistory, getAvailableKeys, needsBackfill, runBackfill } from '../services/oddsHistoryService.js';
 import { getTeamStats, getPlayerGameStats } from '../services/statsService.js';
 import { getGameData, updateTeams } from '../services/dataService.js';
 import { getDefaultGameId } from '../services/gamesService.js';
@@ -77,6 +78,40 @@ router.get('/props', async (req, res) => {
       ...getMockPlayerProps()
     });
   }
+});
+
+// GET /api/odds/history - Get historical odds for a specific line
+router.get('/history', async (req, res) => {
+  const { eventId, key } = req.query;
+  if (!eventId || !key) {
+    return res.status(400).json({ error: 'eventId and key are required' });
+  }
+
+  // Trigger historical backfill if we don't have enough data yet
+  const apiKey = process.env.ODDS_API_KEY;
+  if (apiKey && needsBackfill(eventId)) {
+    try {
+      console.log(`Backfilling historical odds for event ${eventId}...`);
+      const snapshots = await fetchHistoricalOdds(apiKey);
+      runBackfill(eventId, snapshots);
+      console.log(`Backfill complete for event ${eventId}`);
+    } catch (err) {
+      console.warn('Historical backfill failed (will use available data):', err.message);
+    }
+  }
+
+  const history = getOddsHistory(eventId, key);
+  res.json({ eventId, key, history, count: history.length });
+});
+
+// GET /api/odds/history/keys - List available history keys for an event
+router.get('/history/keys', (req, res) => {
+  const { eventId } = req.query;
+  if (!eventId) {
+    return res.status(400).json({ error: 'eventId is required' });
+  }
+  const keys = getAvailableKeys(eventId);
+  res.json({ eventId, keys });
 });
 
 // GET /api/odds/mock - Always return mock data (for testing)

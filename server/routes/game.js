@@ -152,11 +152,17 @@ router.delete('/players/:playerId', (req, res) => {
 // POST /api/game/bets - Place a bet
 router.post('/bets', (req, res) => {
   try {
-    const { gameId, playerId, type, description, selection, wager } = req.body;
-    if (!playerId || !type || !selection || !wager) {
+    const { gameId, playerId, type, description, selection, wager, legs } = req.body;
+    if (!playerId || !type || !wager) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    const bet = placeBet(gameId, playerId, { type, description, selection, wager });
+    if (type === 'parlay' && (!legs || legs.length < 2)) {
+      return res.status(400).json({ error: 'Parlay requires at least 2 legs' });
+    }
+    if (type !== 'parlay' && !selection) {
+      return res.status(400).json({ error: 'Missing selection for straight bet' });
+    }
+    const bet = placeBet(gameId, playerId, { type, description, selection, wager, legs });
     res.status(201).json({ bet });
   } catch (error) {
     console.error('Error placing bet:', error);

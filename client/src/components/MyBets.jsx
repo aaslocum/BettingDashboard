@@ -68,6 +68,10 @@ function MyBets({ bets }) {
 }
 
 function BetRow({ bet }) {
+  const [showLegs, setShowLegs] = useState(false);
+  const isParlay = bet.type === 'parlay';
+  const displayOdds = isParlay ? bet.combinedOdds : bet.selection?.odds;
+
   const statusColors = {
     pending: 'text-yellow-400 bg-yellow-400/10',
     won: 'text-green-400 bg-green-400/10',
@@ -76,21 +80,55 @@ function BetRow({ bet }) {
   };
 
   return (
-    <div className="flex items-center justify-between rounded px-2.5 py-2 text-sm" style={{ background: 'rgba(0,0,0,0.2)' }}>
-      <div className="min-w-0 flex-1">
-        <div className="text-white text-xs font-medium truncate">{bet.description}</div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className={`text-xs font-bold ${getOddsColorClass(bet.selection.odds)}`}>
-            {formatOdds(bet.selection.odds)}
-          </span>
-          <span className="text-xs text-gray-500">
-            {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
-          </span>
+    <div>
+      <div
+        className={`flex items-center justify-between rounded px-2.5 py-2 text-sm ${isParlay ? 'cursor-pointer' : ''}`}
+        style={{ background: 'rgba(0,0,0,0.2)' }}
+        onClick={isParlay ? () => setShowLegs(!showLegs) : undefined}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {isParlay && (
+              <span className="text-[9px] font-bold px-1 py-0.5 rounded flex-shrink-0"
+                    style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
+                PARLAY
+              </span>
+            )}
+            <span className="text-white text-xs font-medium truncate">{bet.description}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {displayOdds !== undefined && (
+              <span className={`text-xs font-bold ${getOddsColorClass(displayOdds)}`}>
+                {formatOdds(displayOdds)}
+              </span>
+            )}
+            <span className="text-xs text-gray-500">
+              {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
+            </span>
+            {isParlay && (
+              <span className="text-[10px] text-gray-600">{showLegs ? '▲' : '▼'}</span>
+            )}
+          </div>
         </div>
+        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${statusColors[bet.status]}`}>
+          {bet.status}
+        </span>
       </div>
-      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${statusColors[bet.status]}`}>
-        {bet.status}
-      </span>
+
+      {/* Expanded parlay legs */}
+      {isParlay && showLegs && bet.legs && (
+        <div className="ml-4 mt-1 space-y-0.5">
+          {bet.legs.map((leg, idx) => (
+            <div key={idx} className="flex justify-between text-[11px] px-2 py-1 rounded"
+                 style={{ background: 'rgba(0,0,0,0.1)' }}>
+              <span className="text-gray-400 truncate mr-2">{leg.description}</span>
+              <span className={`font-bold flex-shrink-0 ${getOddsColorClass(leg.odds)}`}>
+                {formatOdds(leg.odds)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

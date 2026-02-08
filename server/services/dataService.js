@@ -502,7 +502,25 @@ function calculateBetPayout(odds, wager) {
   }
 }
 
-// Place a bet
+// Convert American odds to decimal (for parlay math)
+function americanToDecimalBackend(odds) {
+  if (odds < 0) {
+    return 1 + (100 / Math.abs(odds));
+  } else {
+    return 1 + (odds / 100);
+  }
+}
+
+// Convert decimal odds to American (for parlay math)
+function decimalToAmericanBackend(decimal) {
+  if (decimal >= 2) {
+    return Math.round((decimal - 1) * 100);
+  } else {
+    return Math.round(-100 / (decimal - 1));
+  }
+}
+
+// Place a bet (straight or parlay)
 export function placeBet(gameId, playerId, betData) {
   const data = getGameData(gameId);
   ensureBets(data);
@@ -510,32 +528,84 @@ export function placeBet(gameId, playerId, betData) {
   const player = data.players.find(p => p.id === playerId);
   if (!player) throw new Error('Player not found');
 
-  const { type, description, selection, wager } = betData;
-  if (!type || !description || !selection || !wager) {
-    throw new Error('Missing required bet fields');
-  }
+  const { type, wager } = betData;
+  if (!type || !wager) throw new Error('Missing required bet fields');
   if (wager <= 0) throw new Error('Wager must be positive');
   if (wager < 0.25) throw new Error('Minimum wager is $0.25');
 
-  const potentialPayout = calculateBetPayout(selection.odds, wager);
-  if (potentialPayout > 10.01) {
-    throw new Error('Bet exceeds maximum $10 payout');
-  }
+  let bet;
 
-  const bet = {
-    id: generateBetId(),
-    playerId,
-    playerInitials: player.initials,
-    type,
-    description,
-    selection,
-    wager: Math.round(wager * 100) / 100,
-    potentialPayout: Math.round(potentialPayout * 100) / 100,
-    status: 'pending',
-    result: null,
-    createdAt: new Date().toISOString(),
-    settledAt: null
-  };
+  if (type === 'parlay') {
+    // --- Parlay bet ---
+    const { legs } = betData;
+    if (!legs || !Array.isArray(legs) || legs.length < 2) {
+      throw new Error('Parlay requires at least 2 legs');
+    }
+    // Validate each leg
+    for (const leg of legs) {
+      if (!leg.market || !leg.outcome || leg.odds === undefined || !leg.description) {
+        throw new Error('Each parlay leg must have market, outcome, odds, and description');
+      }
+    }
+
+    // Calculate combined decimal odds
+    const combinedDecimal = legs.reduce((acc, leg) => acc * americanToDecimalBackend(leg.odds), 1);
+    const combinedOdds = decimalToAmericanBackend(combinedDecimal);
+    const potentialPayout = wager * (combinedDecimal - 1);
+
+    if (potentialPayout > 100.01) {
+      throw new Error('Parlay exceeds maximum $100 payout');
+    }
+
+    bet = {
+      id: generateBetId(),
+      playerId,
+      playerInitials: player.initials,
+      type: 'parlay',
+      description: `${legs.length}-Leg Parlay`,
+      selection: null,
+      legs: legs.map(l => ({
+        market: l.market,
+        outcome: l.outcome,
+        odds: l.odds,
+        point: l.point ?? null,
+        description: l.description
+      })),
+      combinedOdds,
+      wager: Math.round(wager * 100) / 100,
+      potentialPayout: Math.round(potentialPayout * 100) / 100,
+      status: 'pending',
+      result: null,
+      createdAt: new Date().toISOString(),
+      settledAt: null
+    };
+  } else {
+    // --- Straight bet ---
+    const { description, selection } = betData;
+    if (!description || !selection) {
+      throw new Error('Missing required bet fields');
+    }
+
+    const potentialPayout = calculateBetPayout(selection.odds, wager);
+    if (potentialPayout > 10.01) {
+      throw new Error('Bet exceeds maximum $10 payout');
+    }
+
+    bet = {
+      id: generateBetId(),
+      playerId,
+      playerInitials: player.initials,
+      type,
+      description,
+      selection,
+      wager: Math.round(wager * 100) / 100,
+      potentialPayout: Math.round(potentialPayout * 100) / 100,
+      status: 'pending',
+      result: null,
+      createdAt: new Date().toISOString(),
+      settledAt: null
+    };
+  }
 
   data.bets.push(bet);
   saveGameData(data);

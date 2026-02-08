@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { formatOdds, getOddsColorClass } from '../utils/helpers';
 
-function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick }) {
+// Small trend-line chart icon
+function ChartIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1,12 5,7 9,9 15,3" />
+      <polyline points="11,3 15,3 15,7" />
+    </svg>
+  );
+}
+
+function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick, onChartClick }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   if (!propsData?.games?.[0]?.props || propsData.games[0].props.length === 0) {
@@ -158,29 +168,50 @@ function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick }) {
               {playerProps.map((prop, idx) => (
                 <div
                   key={idx}
-                  className={`flex justify-between items-center text-sm ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-1 py-0.5 transition-colors' : ''}`}
-                  onClick={onBetClick ? () => onBetClick({
-                    type: 'prop',
-                    market: prop.marketName,
-                    outcome: prop.player,
-                    odds: prop.odds,
-                    point: prop.line,
-                    name: prop.name,
-                    description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
-                  }) : undefined}
+                  className="flex items-center text-sm"
                 >
-                  <span className="text-gray-400">
-                    {prop.marketName}
-                    {prop.line !== null && (
-                      <span className="ml-1">({prop.name} {prop.line})</span>
-                    )}
-                    {prop.line === null && prop.name !== 'Yes' && (
-                      <span className="ml-1">({prop.name})</span>
-                    )}
-                  </span>
-                  <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
-                    {formatOdds(prop.odds)}
-                  </span>
+                  <div
+                    className={`flex-1 flex justify-between items-center ${onBetClick ? 'cursor-pointer hover:bg-white/10 rounded px-1 py-0.5 transition-colors' : ''}`}
+                    onClick={onBetClick ? () => onBetClick({
+                      type: 'prop',
+                      market: prop.marketName,
+                      outcome: prop.player,
+                      odds: prop.odds,
+                      point: prop.line,
+                      name: prop.name,
+                      description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
+                    }) : undefined}
+                  >
+                    <span className="text-gray-400">
+                      {prop.marketName}
+                      {prop.line !== null && (
+                        <span className="ml-1">({prop.name} {prop.line})</span>
+                      )}
+                      {prop.line === null && prop.name !== 'Yes' && (
+                        <span className="ml-1">({prop.name})</span>
+                      )}
+                    </span>
+                    <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
+                      {formatOdds(prop.odds)}
+                    </span>
+                  </div>
+                  {onChartClick && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChartClick({
+                          eventId: propsData.games[0].id,
+                          key: `${prop.market}__${prop.player}__${prop.name}`,
+                          label: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`,
+                          currentOdds: prop.odds
+                        });
+                      }}
+                      className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5 ml-1 flex-shrink-0"
+                      title="View odds history"
+                    >
+                      <ChartIcon size={11} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

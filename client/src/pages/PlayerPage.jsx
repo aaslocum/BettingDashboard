@@ -8,6 +8,8 @@ import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
 import BetSlipModal from '../components/BetSlipModal';
+import OddsHistoryModal from '../components/OddsHistoryModal';
+import ParlayModal from '../components/ParlayModal';
 import MyBets from '../components/MyBets';
 import { formatCurrency } from '../utils/helpers';
 
@@ -47,6 +49,8 @@ function PlayerPage() {
   const { playerGameStats } = usePlayerGameStats(15000);
   const [claimError, setClaimError] = useState('');
   const [betSlip, setBetSlip] = useState(null);
+  const [chartInfo, setChartInfo] = useState(null);
+  const [showParlayModal, setShowParlayModal] = useState(false);
   const [activeTab, setActiveTab] = useState('squares');
 
   const { bets: myBets, refetchBets } = useBets(10000, currentGameId, selectedPlayerId);
@@ -58,6 +62,10 @@ function PlayerPage() {
       return;
     }
     setBetSlip(betInfo);
+  };
+
+  const handleChartClick = (info) => {
+    setChartInfo(info);
   };
 
   const handlePlaceBet = async (wager) => {
@@ -75,6 +83,29 @@ function PlayerPage() {
         wager,
       });
       setBetSlip(null);
+      refetchBets();
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const handlePlaceParlay = async (wager, legs) => {
+    if (!selectedPlayer) return;
+    try {
+      await placeBet(selectedPlayer.id, {
+        type: 'parlay',
+        description: `${legs.length}-Leg Parlay`,
+        selection: null,
+        wager,
+        legs: legs.map(leg => ({
+          market: leg.market,
+          outcome: leg.outcome,
+          odds: leg.odds,
+          point: leg.point ?? null,
+          description: leg.description,
+        })),
+      });
+      setShowParlayModal(false);
       refetchBets();
     } catch (err) {
       throw err;
@@ -300,11 +331,27 @@ function PlayerPage() {
               <MyBets bets={myBets} />
             )}
 
+            {/* Create Parlay Button */}
+            {selectedPlayer && (
+              <button
+                onClick={() => setShowParlayModal(true)}
+                className="w-full py-3 rounded-lg font-bold text-sm tracking-wider uppercase transition-all hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.08) 100%)',
+                  border: '1px solid rgba(212,175,55,0.4)',
+                  color: 'var(--nbc-gold)'
+                }}
+              >
+                + BUILD PARLAY
+                <span className="text-[10px] ml-2 font-normal text-gray-400">(up to $100 payout)</span>
+              </button>
+            )}
+
             {/* Game Odds */}
-            <OddsDisplay oddsData={oddsData} onBetClick={handleBetClick} />
+            <OddsDisplay oddsData={oddsData} onBetClick={handleBetClick} onChartClick={handleChartClick} />
 
             {/* Player Props */}
-            <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} />
+            <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} onChartClick={handleChartClick} />
           </>
         )}
       </div>
@@ -315,6 +362,27 @@ function PlayerPage() {
           bet={betSlip}
           onPlace={handlePlaceBet}
           onClose={() => setBetSlip(null)}
+        />
+      )}
+
+      {/* Odds History Chart Modal */}
+      {chartInfo && (
+        <OddsHistoryModal
+          eventId={chartInfo.eventId}
+          oddsKey={chartInfo.key}
+          label={chartInfo.label}
+          currentOdds={chartInfo.currentOdds}
+          onClose={() => setChartInfo(null)}
+        />
+      )}
+
+      {/* Parlay Builder Modal */}
+      {showParlayModal && (
+        <ParlayModal
+          oddsData={oddsData}
+          propsData={propsData}
+          onPlace={handlePlaceParlay}
+          onClose={() => setShowParlayModal(false)}
         />
       )}
     </div>

@@ -1,3 +1,5 @@
+import { recordOddsSnapshot, makeOddsKey } from './oddsHistoryService.js';
+
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 
 // Cache for odds data
@@ -80,6 +82,26 @@ export async function fetchSuperBowlOdds(apiKey) {
     // Update cache
     oddsCache.data = oddsData;
     oddsCache.timestamp = Date.now();
+
+    // Record odds history snapshot
+    oddsData.games.forEach(game => {
+      const entries = [];
+      game.bookmakers?.forEach(bm => {
+        bm.markets?.forEach(market => {
+          market.outcomes?.forEach(outcome => {
+            entries.push({
+              key: makeOddsKey(market.key, outcome.name),
+              value: outcome.price,
+              point: outcome.point ?? null,
+              timestamp: oddsData.timestamp
+            });
+          });
+        });
+      });
+      if (entries.length > 0) {
+        recordOddsSnapshot(game.id, entries);
+      }
+    });
 
     return oddsData;
   } catch (error) {
@@ -180,11 +202,105 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
     propsCache.data = propsData;
     propsCache.timestamp = Date.now();
 
+    // Record props history snapshot
+    propsData.games.forEach(game => {
+      const entries = [];
+      game.props?.forEach(prop => {
+        entries.push({
+          key: makeOddsKey(prop.market, prop.name, prop.player),
+          value: prop.odds,
+          point: prop.line,
+          timestamp: propsData.timestamp
+        });
+      });
+      if (entries.length > 0) {
+        recordOddsSnapshot(game.id, entries);
+      }
+    });
+
     return propsData;
   } catch (error) {
     console.error('Error fetching player props:', error);
     throw error;
   }
+}
+
+/**
+ * Fetch historical odds from The Odds API
+ * Uses previous_timestamp from each response to walk backwards through snapshots.
+ * 1 week of data, sampling every ~8 hours.
+ *
+ * Cost: 10 credits × 3 markets × 1 region = 30 per call
+ * ~21 calls for 1 week at 8h intervals = ~630 quota
+ */
+export async function fetchHistoricalOdds(apiKey, daysBack = 7, intervalHours = 8) {
+  if (!apiKey) {
+    throw new Error('ODDS_API_KEY not configured');
+  }
+
+  const results = [];
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  let currentDate = new Date(now.getTime() - intervalHours * 60 * 60 * 1000);
+  let callCount = 0;
+  const maxCalls = Math.ceil((daysBack * 24) / intervalHours) + 2; // safety cap
+
+  while (currentDate >= cutoff && callCount < maxCalls) {
+    try {
+      const url = new URL(`${ODDS_API_BASE}/historical/sports/americanfootball_nfl/odds`);
+      url.searchParams.append('apiKey', apiKey);
+      url.searchParams.append('regions', 'us');
+      url.searchParams.append('markets', 'h2h,spreads,totals');
+      url.searchParams.append('oddsFormat', 'american');
+      url.searchParams.append('bookmakers', DRAFTKINGS_KEY);
+      url.searchParams.append('date', currentDate.toISOString());
+
+      const response = await fetch(url.toString());
+      callCount++;
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`Historical fetch failed at ${currentDate.toISOString()}: ${response.status} - ${errText}`);
+        break;
+      }
+
+      const snapshot = await response.json();
+
+      if (snapshot.data && snapshot.data.length > 0) {
+        const snapshotTime = snapshot.timestamp || currentDate.toISOString();
+
+        for (const game of snapshot.data) {
+          const entries = [];
+          const draftkings = game.bookmakers?.find(b => b.key === DRAFTKINGS_KEY);
+          draftkings?.markets?.forEach(market => {
+            market.outcomes?.forEach(outcome => {
+              entries.push({
+                key: makeOddsKey(market.key, outcome.name),
+                value: outcome.price,
+                point: outcome.point ?? null,
+                timestamp: snapshotTime
+              });
+            });
+          });
+          if (entries.length > 0) {
+            results.push({ eventId: game.id, entries });
+          }
+        }
+      }
+
+      // Jump backwards by interval
+      currentDate = new Date(currentDate.getTime() - intervalHours * 60 * 60 * 1000);
+
+      // Rate-limit delay
+      await new Promise(r => setTimeout(r, 250));
+    } catch (err) {
+      console.error('Historical odds fetch error:', err.message);
+      break;
+    }
+  }
+
+  console.log(`Historical backfill: ${callCount} API calls, ${results.length} snapshots over ${daysBack} days`);
+  return results;
 }
 
 // Format prop market key to readable name
@@ -309,7 +425,7 @@ export function resetMockScores() {
 
 // Get mock data for development/demo (Super Bowl LX - DraftKings only)
 export function getMockOdds() {
-  return {
+  const data = {
     games: [{
       id: 'superbowl-lx-2026',
       sport: 'americanfootball_nfl',
@@ -349,11 +465,33 @@ export function getMockOdds() {
     timestamp: new Date().toISOString(),
     mock: true
   };
+
+  // Record mock odds history
+  data.games.forEach(game => {
+    const entries = [];
+    game.bookmakers?.forEach(bm => {
+      bm.markets?.forEach(market => {
+        market.outcomes?.forEach(outcome => {
+          entries.push({
+            key: makeOddsKey(market.key, outcome.name),
+            value: outcome.price,
+            point: outcome.point ?? null,
+            timestamp: data.timestamp
+          });
+        });
+      });
+    });
+    if (entries.length > 0) {
+      recordOddsSnapshot(game.id, entries);
+    }
+  });
+
+  return data;
 }
 
 // Get mock player props for development/demo (Super Bowl LX - Seahawks vs Patriots)
 export function getMockPlayerProps() {
-  return {
+  const data = {
     games: [{
       id: 'superbowl-lx-2026',
       homeTeam: 'Seattle Seahawks',
@@ -419,4 +557,22 @@ export function getMockPlayerProps() {
     timestamp: new Date().toISOString(),
     mock: true
   };
+
+  // Record mock props history
+  data.games.forEach(game => {
+    const entries = [];
+    game.props?.forEach(prop => {
+      entries.push({
+        key: makeOddsKey(prop.market, prop.name, prop.player),
+        value: prop.odds,
+        point: prop.line,
+        timestamp: data.timestamp
+      });
+    });
+    if (entries.length > 0) {
+      recordOddsSnapshot(game.id, entries);
+    }
+  });
+
+  return data;
 }
