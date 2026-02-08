@@ -270,6 +270,8 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(gameData?.name || '');
   const [betAmount, setBetAmount] = useState(gameData?.betAmount || 1);
+  const [maxPayoutParlay, setMaxPayoutParlay] = useState(gameData?.maxPayoutParlay ?? 100);
+  const [maxPayoutStraight, setMaxPayoutStraight] = useState(gameData?.maxPayoutStraight ?? 20);
   const [distribution, setDistribution] = useState(() => {
     const d = gameData?.prizeDistribution || DEFAULT_DISTRIBUTION;
     return { q1: d.q1 * 100, q2: d.q2 * 100, q3: d.q3 * 100, q4: d.q4 * 100 };
@@ -278,6 +280,8 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
   useEffect(() => {
     setName(gameData?.name || '');
     setBetAmount(gameData?.betAmount || 1);
+    setMaxPayoutParlay(gameData?.maxPayoutParlay ?? 100);
+    setMaxPayoutStraight(gameData?.maxPayoutStraight ?? 20);
     const d = gameData?.prizeDistribution || DEFAULT_DISTRIBUTION;
     setDistribution({ q1: d.q1 * 100, q2: d.q2 * 100, q3: d.q3 * 100, q4: d.q4 * 100 });
   }, [gameData]);
@@ -291,7 +295,7 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
   };
 
   const handleSave = async () => {
-    const updates = { name, betAmount };
+    const updates = { name, betAmount, maxPayoutParlay, maxPayoutStraight };
     if (!gameData?.grid?.locked) {
       updates.prizeDistribution = {
         q1: distribution.q1 / 100,
@@ -397,6 +401,37 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
             )}
           </div>
 
+          {/* Max Payout Limits */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Max Payout Limits</label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500 w-20">Straight Bet</label>
+                <span className="text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={maxPayoutStraight}
+                  onChange={(e) => setMaxPayoutStraight(parseFloat(e.target.value) || 0)}
+                  min="1"
+                  step="1"
+                  className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500 w-20">Parlay</label>
+                <span className="text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={maxPayoutParlay}
+                  onChange={(e) => setMaxPayoutParlay(parseFloat(e.target.value) || 0)}
+                  min="1"
+                  step="1"
+                  className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={handleSave}
@@ -442,6 +477,19 @@ function GameSettingsControl({ gameData, games, onUpdate, onDelete }) {
               <div className="flex justify-between">
                 <span className="text-gray-500">Final:</span>
                 <span className="text-white">{formatCurrency(gameData?.quarters?.q4?.prize || totalPool * 0.40)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="pt-2 mt-2 border-t border-gray-700">
+            <div className="text-gray-400 mb-1">Max Payout Limits:</div>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Straight Bet:</span>
+                <span className="text-white">{formatCurrency(gameData?.maxPayoutStraight ?? 20)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Parlay:</span>
+                <span className="text-white">{formatCurrency(gameData?.maxPayoutParlay ?? 100)}</span>
               </div>
             </div>
           </div>

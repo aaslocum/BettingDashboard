@@ -54,9 +54,9 @@ router.post('/', (req, res) => {
 router.put('/:gameId', (req, res) => {
   try {
     const { gameId } = req.params;
-    const { name, betAmount } = req.body;
+    const { name, betAmount, prizeDistribution, maxPayoutParlay, maxPayoutStraight } = req.body;
 
-    const game = updateGameSettings(gameId, { name, betAmount });
+    const game = updateGameSettings(gameId, { name, betAmount, prizeDistribution, maxPayoutParlay, maxPayoutStraight });
     res.json({ message: 'Game updated', game });
   } catch (error) {
     console.error('Error updating game:', error);

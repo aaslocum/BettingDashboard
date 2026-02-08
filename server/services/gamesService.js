@@ -75,6 +75,8 @@ function createDefaultGameState(options = {}) {
     name = 'Super Bowl Party',
     betAmount = 1,
     prizeDistribution = DEFAULT_PRIZE_DISTRIBUTION,
+    maxPayoutParlay = 100,
+    maxPayoutStraight = 20,
     id = generateGameId()
   } = options;
 
@@ -87,6 +89,8 @@ function createDefaultGameState(options = {}) {
     betAmount,
     totalPool: betAmount * 100,
     prizeDistribution: validatedDistribution,
+    maxPayoutParlay,
+    maxPayoutStraight,
     players: [],
     teams: {
       home: { name: 'Team A', abbreviation: 'TMA' },
@@ -316,6 +320,18 @@ export function updateGameSettings(gameId, settings) {
     gameData.quarters.q2.prize = prizes.q2;
     gameData.quarters.q3.prize = prizes.q3;
     gameData.quarters.q4.prize = prizes.q4;
+  }
+
+  if (settings.maxPayoutParlay !== undefined) {
+    const val = parseFloat(settings.maxPayoutParlay);
+    if (val <= 0) throw new Error('Max parlay payout must be greater than 0');
+    gameData.maxPayoutParlay = val;
+  }
+
+  if (settings.maxPayoutStraight !== undefined) {
+    const val = parseFloat(settings.maxPayoutStraight);
+    if (val <= 0) throw new Error('Max straight bet payout must be greater than 0');
+    gameData.maxPayoutStraight = val;
   }
 
   return saveGame(gameData);

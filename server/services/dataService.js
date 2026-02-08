@@ -553,8 +553,9 @@ export function placeBet(gameId, playerId, betData) {
     const combinedOdds = decimalToAmericanBackend(combinedDecimal);
     const potentialPayout = wager * (combinedDecimal - 1);
 
-    if (potentialPayout > 100.01) {
-      throw new Error('Parlay exceeds maximum $100 payout');
+    const parlayMax = data.maxPayoutParlay ?? 100;
+    if (potentialPayout > parlayMax + 0.01) {
+      throw new Error(`Parlay exceeds maximum $${parlayMax} payout`);
     }
 
     bet = {
@@ -587,8 +588,9 @@ export function placeBet(gameId, playerId, betData) {
     }
 
     const potentialPayout = calculateBetPayout(selection.odds, wager);
-    if (potentialPayout > 10.01) {
-      throw new Error('Bet exceeds maximum $10 payout');
+    const straightMax = data.maxPayoutStraight ?? 20;
+    if (potentialPayout > straightMax + 0.01) {
+      throw new Error(`Bet exceeds maximum $${straightMax} payout`);
     }
 
     bet = {

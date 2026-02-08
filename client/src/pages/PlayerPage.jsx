@@ -343,7 +343,7 @@ function PlayerPage() {
                 }}
               >
                 + BUILD PARLAY
-                <span className="text-[10px] ml-2 font-normal text-gray-400">(up to $100 payout)</span>
+                <span className="text-[10px] ml-2 font-normal text-gray-400">(up to ${gameData.maxPayoutParlay ?? 100} payout)</span>
               </button>
             )}
 
@@ -360,6 +360,7 @@ function PlayerPage() {
       {betSlip && (
         <BetSlipModal
           bet={betSlip}
+          maxPayout={gameData.maxPayoutStraight ?? 20}
           onPlace={handlePlaceBet}
           onClose={() => setBetSlip(null)}
         />
@@ -381,6 +382,7 @@ function PlayerPage() {
         <ParlayModal
           oddsData={oddsData}
           propsData={propsData}
+          maxPayout={gameData.maxPayoutParlay ?? 100}
           onPlace={handlePlaceParlay}
           onClose={() => setShowParlayModal(false)}
         />

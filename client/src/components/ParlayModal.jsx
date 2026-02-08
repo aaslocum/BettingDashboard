@@ -1,8 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { formatOdds, getOddsColorClass, calculateParlayDecimalOdds, calculateParlayMaxWager, decimalToAmerican } from '../utils/helpers';
+import { formatOdds, getOddsColorClass, calculateParlayDecimalOdds, calculateParlayMaxWager, decimalToAmerican, americanToDecimal } from '../utils/helpers';
 import ParlayLegsSummary from './ParlayLegsSummary';
-
-const MAX_PAYOUT = 100;
 
 // Category labels for player props
 const categoryLabels = {
@@ -33,7 +31,8 @@ function makeConflictGroup(type, market, outcome, point) {
   return `game__${market}`;
 }
 
-function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
+function ParlayModal({ oddsData, propsData, maxPayout = 100, onPlace, onClose }) {
+  const MAX_PAYOUT = maxPayout;
   const [legs, setLegs] = useState([]);
   const [wager, setWager] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -57,7 +56,14 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
     return decimalToAmerican(combinedDecimal);
   }, [combinedDecimal, legs.length]);
 
-  const maxWager = useMemo(() => calculateParlayMaxWager(combinedDecimal, MAX_PAYOUT), [combinedDecimal]);
+  const maxWager = useMemo(() => calculateParlayMaxWager(combinedDecimal, MAX_PAYOUT), [combinedDecimal, MAX_PAYOUT]);
+
+  // Auto-reduce wager when max drops below current wager
+  useEffect(() => {
+    if (legs.length >= 2 && wager > maxWager) {
+      setWager(maxWager);
+    }
+  }, [maxWager, legs.length]);
 
   const parlayPayout = useMemo(() => {
     if (combinedDecimal <= 1 || !wager) return 0;
@@ -68,6 +74,17 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
 
   // Build a set of selected leg IDs for quick lookup
   const selectedIds = useMemo(() => new Set(legs.map(l => l.id)), [legs]);
+
+  // Check whether adding a leg with the given odds would exceed max payout
+  // Returns true if the leg CANNOT be added (even minimum $0.25 wager would exceed max)
+  const wouldExceedMax = useCallback((newLegOdds, existingLegs) => {
+    if (existingLegs.length < 1) return false; // Need at least 2 legs for a parlay
+    const allOdds = [...existingLegs.map(l => l.odds), newLegOdds];
+    const newCombinedDecimal = calculateParlayDecimalOdds(allOdds);
+    const minWager = 0.25;
+    const minPayout = minWager * (newCombinedDecimal - 1);
+    return minPayout > MAX_PAYOUT;
+  }, [MAX_PAYOUT]);
 
   // Toggle a leg on/off
   const toggleLeg = useCallback((legData) => {
@@ -85,9 +102,16 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
         return lg !== conflictGroup;
       });
 
+      // Check if adding this leg would exceed max payout even at minimum wager
+      if (wouldExceedMax(legData.odds, withoutConflict)) {
+        setError(`Adding this leg would exceed the $${MAX_PAYOUT} max payout`);
+        setTimeout(() => setError(''), 3000);
+        return prev;
+      }
+
       return [...withoutConflict, legData];
     });
-  }, []);
+  }, [wouldExceedMax, MAX_PAYOUT]);
 
   const removeLeg = useCallback((legId) => {
     setLegs(prev => prev.filter(l => l.id !== legId));
@@ -129,6 +153,12 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
 
   // Helper to check if a specific bet is selected
   const isSelected = (id) => selectedIds.has(id);
+
+  // Helper to check if adding a bet with given odds would be blocked
+  const isBlocked = useCallback((id, odds) => {
+    if (selectedIds.has(id)) return false; // Can always remove
+    return wouldExceedMax(odds, legs);
+  }, [selectedIds, legs, wouldExceedMax]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.92)' }}>
@@ -186,6 +216,7 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                   {h2h.outcomes?.map((o) => {
                     const legId = makeLegId('moneyline', 'h2h', o.name, null);
                     const selected = isSelected(legId);
+                    const blocked = isBlocked(legId, o.price);
                     return (
                       <button
                         key={o.name}
@@ -198,10 +229,13 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                           point: null,
                           description: `${o.name} Moneyline`
                         })}
+                        disabled={blocked}
                         className={`flex-1 text-center rounded p-2 transition-all ${
                           selected
                             ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
-                            : 'hover:bg-white/5'
+                            : blocked
+                              ? 'opacity-40 cursor-not-allowed'
+                              : 'hover:bg-white/5'
                         }`}
                         style={!selected ? { background: 'rgba(0,0,0,0.2)' } : {}}
                       >
@@ -211,6 +245,9 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                         </div>
                         {selected && (
                           <div className="text-[8px] font-bold mt-0.5" style={{ color: 'var(--nbc-gold)' }}>✓ ADDED</div>
+                        )}
+                        {blocked && (
+                          <div className="text-[8px] font-bold mt-0.5 text-red-400">MAX</div>
                         )}
                       </button>
                     );
@@ -227,6 +264,7 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                   {spreads.outcomes?.map((o) => {
                     const legId = makeLegId('spread', 'spreads', o.name, o.point);
                     const selected = isSelected(legId);
+                    const blocked = isBlocked(legId, o.price);
                     return (
                       <button
                         key={o.name}
@@ -239,16 +277,19 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                           point: o.point,
                           description: `${o.name} ${o.point > 0 ? '+' : ''}${o.point}`
                         })}
+                        disabled={blocked}
                         className={`w-full flex justify-between items-center text-sm mb-1 rounded px-2 py-1.5 transition-all ${
                           selected
                             ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
-                            : 'hover:bg-white/5'
+                            : blocked
+                              ? 'opacity-40 cursor-not-allowed'
+                              : 'hover:bg-white/5'
                         }`}
                         style={!selected ? { background: 'rgba(0,0,0,0.15)' } : {}}
                       >
                         <span className="text-gray-300 text-xs truncate">{o.name.split(' ').pop()}</span>
-                        <span className="font-bold text-xs" style={{ color: 'var(--nbc-gold)' }}>
-                          {o.point > 0 ? '+' : ''}{o.point}
+                        <span className="font-bold text-xs" style={{ color: blocked ? 'rgb(248,113,113)' : 'var(--nbc-gold)' }}>
+                          {blocked ? 'MAX' : `${o.point > 0 ? '+' : ''}${o.point}`}
                         </span>
                       </button>
                     );
@@ -262,6 +303,7 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                   {totals.outcomes?.map((o) => {
                     const legId = makeLegId('totals', 'totals', o.name, o.point);
                     const selected = isSelected(legId);
+                    const blocked = isBlocked(legId, o.price);
                     return (
                       <button
                         key={o.name}
@@ -274,15 +316,18 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                           point: o.point,
                           description: `${o.name} ${o.point} Total Points`
                         })}
+                        disabled={blocked}
                         className={`w-full flex justify-between items-center text-sm mb-1 rounded px-2 py-1.5 transition-all ${
                           selected
                             ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
-                            : 'hover:bg-white/5'
+                            : blocked
+                              ? 'opacity-40 cursor-not-allowed'
+                              : 'hover:bg-white/5'
                         }`}
                         style={!selected ? { background: 'rgba(0,0,0,0.15)' } : {}}
                       >
                         <span className="text-gray-300 text-xs">{o.name}</span>
-                        <span className="text-blue-400 font-bold text-xs">{o.point}</span>
+                        <span className={`font-bold text-xs ${blocked ? 'text-red-400' : 'text-blue-400'}`}>{blocked ? 'MAX' : o.point}</span>
                       </button>
                     );
                   })}
@@ -326,6 +371,7 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                     {playerProps.map((prop, idx) => {
                       const legId = makeLegId('prop', prop.marketName, prop.player, `${prop.name}_${prop.line}`);
                       const selected = isSelected(legId);
+                      const blocked = isBlocked(legId, prop.odds);
                       return (
                         <button
                           key={idx}
@@ -339,10 +385,13 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                             name: prop.name,
                             description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
                           })}
+                          disabled={blocked}
                           className={`w-full flex justify-between items-center text-xs rounded px-2 py-1.5 transition-all ${
                             selected
                               ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
-                              : 'hover:bg-white/5'
+                              : blocked
+                                ? 'opacity-40 cursor-not-allowed'
+                                : 'hover:bg-white/5'
                           }`}
                           style={!selected ? { background: 'rgba(0,0,0,0.15)' } : {}}
                         >
@@ -356,11 +405,17 @@ function ParlayModal({ oddsData, propsData, onPlace, onClose }) {
                             )}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
-                              {formatOdds(prop.odds)}
-                            </span>
-                            {selected && (
-                              <span className="text-[8px] font-bold" style={{ color: 'var(--nbc-gold)' }}>✓</span>
+                            {blocked ? (
+                              <span className="text-[8px] font-bold text-red-400">MAX</span>
+                            ) : (
+                              <>
+                                <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
+                                  {formatOdds(prop.odds)}
+                                </span>
+                                {selected && (
+                                  <span className="text-[8px] font-bold" style={{ color: 'var(--nbc-gold)' }}>✓</span>
+                                )}
+                              </>
                             )}
                           </div>
                         </button>

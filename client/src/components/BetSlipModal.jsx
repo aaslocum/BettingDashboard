@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { formatOdds, getOddsColorClass, calculatePayout, calculateMaxWager, formatCurrency } from '../utils/helpers';
 
-function BetSlipModal({ bet, onPlace, onClose }) {
-  const maxPayout = 20;
+function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
   const maxWager = useMemo(() => calculateMaxWager(bet.odds, maxPayout), [bet.odds]);
   const [wager, setWager] = useState(Math.min(1, maxWager));
   const [placing, setPlacing] = useState(false);
