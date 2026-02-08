@@ -143,23 +143,13 @@ export function getOddsHistory(eventId, oddsKey) {
 }
 
 /**
- * Check if an event needs historical backfill
+ * Check if a backfill key needs historical data.
+ * backfillKey can be a composite like "eventId__props" or "eventId__game",
+ * or just an eventId for backwards compat.
  */
-export function needsBackfill(eventId) {
-  if (backfilledEvents.has(eventId)) return false;
-
-  const history = loadHistory(eventId);
-  const keys = Object.keys(history.lines);
-  if (keys.length === 0) return true;
-
-  // Check if we have data spanning at least a few days
-  const firstKey = keys[0];
-  const entries = history.lines[firstKey];
-  if (!entries || entries.length < 5) return true;
-
-  const oldest = new Date(entries[0].t);
-  const daysCovered = (Date.now() - oldest.getTime()) / (1000 * 60 * 60 * 24);
-  return daysCovered < 5; // Backfill if we have less than 5 days
+export function needsBackfill(backfillKey) {
+  if (backfilledEvents.has(backfillKey)) return false;
+  return true;
 }
 
 /**

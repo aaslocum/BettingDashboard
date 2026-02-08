@@ -383,7 +383,7 @@ function ParlayModal({ oddsData, propsData, maxPayout = 100, onPlace, onClose })
                             odds: prop.odds,
                             point: prop.line,
                             name: prop.name,
-                            description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
+                            description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line != null ? ' ' + prop.line : ''}`
                           })}
                           disabled={blocked}
                           className={`w-full flex justify-between items-center text-xs rounded px-2 py-1.5 transition-all ${
@@ -397,10 +397,10 @@ function ParlayModal({ oddsData, propsData, maxPayout = 100, onPlace, onClose })
                         >
                           <span className="text-gray-400 text-left">
                             {prop.marketName}
-                            {prop.line !== null && (
+                            {prop.line != null && (
                               <span className="ml-1">({prop.name} {prop.line})</span>
                             )}
-                            {prop.line === null && prop.name !== 'Yes' && (
+                            {prop.line == null && prop.name !== 'Yes' && (
                               <span className="ml-1">({prop.name})</span>
                             )}
                           </span>

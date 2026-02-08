@@ -26,6 +26,11 @@ let propsCache = {
 // DraftKings bookmaker key
 const DRAFTKINGS_KEY = 'draftkings';
 
+// Format date for historical API (ISO8601 without milliseconds)
+function formatHistoricalDate(date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 // Fetch Super Bowl odds from The Odds API (DraftKings only)
 export async function fetchSuperBowlOdds(apiKey) {
   // Check cache first
@@ -181,7 +186,7 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
           marketName: formatPropMarketName(market.key),
           player: outcome.description || outcome.name,
           name: outcome.name,
-          line: outcome.point,
+          line: outcome.point ?? null,
           odds: outcome.price
         });
       });
@@ -226,14 +231,13 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
 }
 
 /**
- * Fetch historical odds from The Odds API
- * Uses previous_timestamp from each response to walk backwards through snapshots.
- * 1 week of data, sampling every ~8 hours.
+ * Fetch historical game odds from The Odds API
+ * 3 days of data, hourly intervals = 72 API calls.
  *
  * Cost: 10 credits × 3 markets × 1 region = 30 per call
- * ~21 calls for 1 week at 8h intervals = ~630 quota
+ * 72 calls × 30 = ~2160 quota
  */
-export async function fetchHistoricalOdds(apiKey, daysBack = 7, intervalHours = 8) {
+export async function fetchHistoricalOdds(apiKey, daysBack = 3, intervalHours = 1) {
   if (!apiKey) {
     throw new Error('ODDS_API_KEY not configured');
   }
@@ -245,6 +249,8 @@ export async function fetchHistoricalOdds(apiKey, daysBack = 7, intervalHours = 
   let callCount = 0;
   const maxCalls = Math.ceil((daysBack * 24) / intervalHours) + 2; // safety cap
 
+  console.log(`Historical game odds backfill: fetching ${daysBack} days at ${intervalHours}h intervals (~${maxCalls} calls)...`);
+
   while (currentDate >= cutoff && callCount < maxCalls) {
     try {
       const url = new URL(`${ODDS_API_BASE}/historical/sports/americanfootball_nfl/odds`);
@@ -253,21 +259,21 @@ export async function fetchHistoricalOdds(apiKey, daysBack = 7, intervalHours = 
       url.searchParams.append('markets', 'h2h,spreads,totals');
       url.searchParams.append('oddsFormat', 'american');
       url.searchParams.append('bookmakers', DRAFTKINGS_KEY);
-      url.searchParams.append('date', currentDate.toISOString());
+      url.searchParams.append('date', formatHistoricalDate(currentDate));
 
       const response = await fetch(url.toString());
       callCount++;
 
       if (!response.ok) {
         const errText = await response.text();
-        console.warn(`Historical fetch failed at ${currentDate.toISOString()}: ${response.status} - ${errText}`);
+        console.warn(`Historical game odds fetch failed at ${formatHistoricalDate(currentDate)}: ${response.status} - ${errText}`);
         break;
       }
 
       const snapshot = await response.json();
 
       if (snapshot.data && snapshot.data.length > 0) {
-        const snapshotTime = snapshot.timestamp || currentDate.toISOString();
+        const snapshotTime = snapshot.timestamp || formatHistoricalDate(currentDate);
 
         for (const game of snapshot.data) {
           const entries = [];
@@ -292,14 +298,113 @@ export async function fetchHistoricalOdds(apiKey, daysBack = 7, intervalHours = 
       currentDate = new Date(currentDate.getTime() - intervalHours * 60 * 60 * 1000);
 
       // Rate-limit delay
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 200));
     } catch (err) {
-      console.error('Historical odds fetch error:', err.message);
+      console.error('Historical game odds fetch error:', err.message);
       break;
     }
   }
 
-  console.log(`Historical backfill: ${callCount} API calls, ${results.length} snapshots over ${daysBack} days`);
+  console.log(`Historical game odds backfill complete: ${callCount} API calls, ${results.length} snapshots over ${daysBack} days`);
+  return results;
+}
+
+/**
+ * Fetch historical player props from The Odds API
+ * Uses the per-event historical endpoint.
+ * 3 days of data, hourly intervals = 72 API calls.
+ *
+ * Cost: 10 credits × 6 markets × 1 region = 60 per call
+ * 72 calls × 60 = ~4320 quota
+ */
+export async function fetchHistoricalPlayerProps(apiKey, eventId, daysBack = 3, intervalHours = 1) {
+  if (!apiKey) {
+    throw new Error('ODDS_API_KEY not configured');
+  }
+  if (!eventId) {
+    throw new Error('eventId is required for historical player props');
+  }
+
+  const propMarkets = [
+    'player_pass_tds',
+    'player_pass_yds',
+    'player_rush_yds',
+    'player_receptions',
+    'player_reception_yds',
+    'player_anytime_td'
+  ].join(',');
+
+  const results = [];
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  let currentDate = new Date(now.getTime() - intervalHours * 60 * 60 * 1000);
+  let callCount = 0;
+  const maxCalls = Math.ceil((daysBack * 24) / intervalHours) + 2;
+
+  console.log(`Historical player props backfill for event ${eventId}: fetching ${daysBack} days at ${intervalHours}h intervals (~${maxCalls} calls)...`);
+
+  while (currentDate >= cutoff && callCount < maxCalls) {
+    try {
+      const url = new URL(`${ODDS_API_BASE}/historical/sports/americanfootball_nfl/events/${eventId}/odds`);
+      url.searchParams.append('apiKey', apiKey);
+      url.searchParams.append('regions', 'us');
+      url.searchParams.append('markets', propMarkets);
+      url.searchParams.append('oddsFormat', 'american');
+      url.searchParams.append('bookmakers', DRAFTKINGS_KEY);
+      url.searchParams.append('date', formatHistoricalDate(currentDate));
+
+      const response = await fetch(url.toString());
+      callCount++;
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`Historical props fetch failed at ${formatHistoricalDate(currentDate)}: ${response.status} - ${errText}`);
+        // Don't break on 422 (event may not exist that far back) — just skip
+        if (response.status === 422 || response.status === 404) {
+          currentDate = new Date(currentDate.getTime() - intervalHours * 60 * 60 * 1000);
+          await new Promise(r => setTimeout(r, 200));
+          continue;
+        }
+        break;
+      }
+
+      const snapshot = await response.json();
+      const gameData = snapshot.data;
+
+      if (gameData) {
+        const snapshotTime = snapshot.timestamp || formatHistoricalDate(currentDate);
+        const draftkings = gameData.bookmakers?.find(b => b.key === DRAFTKINGS_KEY);
+        const entries = [];
+
+        draftkings?.markets?.forEach(market => {
+          market.outcomes?.forEach(outcome => {
+            const player = outcome.description || outcome.name;
+            entries.push({
+              key: makeOddsKey(market.key, outcome.name, player),
+              value: outcome.price,
+              point: outcome.point ?? null,
+              timestamp: snapshotTime
+            });
+          });
+        });
+
+        if (entries.length > 0) {
+          results.push({ eventId: gameData.id || eventId, entries });
+        }
+      }
+
+      // Jump backwards by interval
+      currentDate = new Date(currentDate.getTime() - intervalHours * 60 * 60 * 1000);
+
+      // Rate-limit delay
+      await new Promise(r => setTimeout(r, 200));
+    } catch (err) {
+      console.error('Historical props fetch error:', err.message);
+      break;
+    }
+  }
+
+  console.log(`Historical player props backfill complete: ${callCount} API calls, ${results.length} snapshots over ${daysBack} days`);
   return results;
 }
 

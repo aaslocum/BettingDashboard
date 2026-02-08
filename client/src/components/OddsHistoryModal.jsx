@@ -139,7 +139,7 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
                 <Line
-                  type="monotone"
+                  type="linear"
                   dataKey="odds"
                   stroke={lineColor}
                   strokeWidth={2}

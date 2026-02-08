@@ -107,7 +107,7 @@ function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick, onChar
                 {playerProps.slice(0, 2).map((prop, idx) => (
                   <div key={idx} className="flex justify-between items-center text-xs">
                     <span className="text-gray-400">
-                      {prop.line !== null ? `${prop.name} ${prop.line}` : prop.marketName}
+                      {prop.line != null ? `${prop.name} ${prop.line}` : prop.marketName}
                     </span>
                     <span className={`font-bold ${getOddsColorClass(prop.odds)}`}>
                       {formatOdds(prop.odds)}
@@ -179,15 +179,15 @@ function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick, onChar
                       odds: prop.odds,
                       point: prop.line,
                       name: prop.name,
-                      description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`
+                      description: `${prop.player} ${prop.marketName} ${prop.name}${prop.line != null ? ' ' + prop.line : ''}`
                     }) : undefined}
                   >
                     <span className="text-gray-400">
                       {prop.marketName}
-                      {prop.line !== null && (
+                      {prop.line != null && (
                         <span className="ml-1">({prop.name} {prop.line})</span>
                       )}
-                      {prop.line === null && prop.name !== 'Yes' && (
+                      {prop.line == null && prop.name !== 'Yes' && (
                         <span className="ml-1">({prop.name})</span>
                       )}
                     </span>
@@ -202,7 +202,7 @@ function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick, onChar
                         onChartClick({
                           eventId: propsData.games[0].id,
                           key: `${prop.market}__${prop.player}__${prop.name}`,
-                          label: `${prop.player} ${prop.marketName} ${prop.name}${prop.line !== null ? ' ' + prop.line : ''}`,
+                          label: `${prop.player} ${prop.marketName} ${prop.name}${prop.line != null ? ' ' + prop.line : ''}`,
                           currentOdds: prop.odds
                         });
                       }}
