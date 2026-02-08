@@ -384,7 +384,24 @@
 }
 
 .square {
-  @apply aspect-square flex items-center justify-center text-xs font-semibold cursor-pointer transition-all;
+  @apply flex items-center justify-center text-xs font-semibold cursor-pointer transition-all;
+  aspect-ratio: 1;
+}
+
+/* Compact squares on small screens so grid fits without scrolling */
+@media (max-width: 480px) {
+  .squares-grid {
+    gap: 1px;
+  }
+  .square {
+    aspect-ratio: auto;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-size: 9px;
+  }
+  .square.header {
+    font-size: 8px;
+  }
 }
 
 .square:hover:not(.claimed):not(.header) {
@@ -870,5 +887,12 @@
   .likelihood-legend-swatch {
     width: 12px;
     height: 12px;
+  }
+}
+
+/* Compact grid container padding on small screens */
+@media (max-width: 480px) {
+  .squares-grid.bg-gray-900 {
+    padding: 2px;
   }
 }

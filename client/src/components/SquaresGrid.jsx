@@ -41,7 +41,7 @@ function SquaresGrid({
   };
 
   const getSquareClass = (index) => {
-    const baseClass = displayMode ? 'square text-base p-1' : 'square text-xs p-0.5';
+    const baseClass = displayMode ? 'square text-base p-1' : 'square text-[9px] sm:text-xs p-0 sm:p-0.5';
     const claimed = squares[index] !== null;
     const isWinner = locked && isWinningSquare(index, homeNumbers, awayNumbers, scores.home, scores.away);
 
@@ -158,7 +158,7 @@ function SquaresGrid({
           {/* The Grid */}
           <div className="squares-grid bg-gray-900 p-1 rounded-lg">
             {/* Top-left corner cell with axis indicator */}
-            <div className="square header bg-gray-800 flex flex-col items-center justify-center !text-[6px] leading-tight font-bold !cursor-default">
+            <div className="square header bg-gray-800 flex flex-col items-center justify-center !text-[5px] sm:!text-[6px] leading-tight font-bold !cursor-default">
               <span className="text-blue-400">{(teams.home.abbreviation || 'H').substring(0, 3)}{'\u2192'}</span>
               <span className="text-red-400">{(teams.away.abbreviation || 'A').substring(0, 3)}{'\u2193'}</span>
             </div>
