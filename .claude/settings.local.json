@@ -18,7 +18,8 @@
       "Bash(timeout 5 node:*)",
       "Bash(npm install:*)",
       "Bash(node -e:*)",
-      "WebFetch(domain:the-odds-api.com)"
+      "WebFetch(domain:the-odds-api.com)",
+      "Bash(ssh root@159.89.185.76 \"curl -sf http://localhost:3001/api/health 2>&1 || echo ''HEALTH CHECK FAILED''\")"
     ]
   }
 }

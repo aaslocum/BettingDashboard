@@ -91,6 +91,11 @@ if command -v pm2 &> /dev/null; then
     pm2 save
     echo "  ✓ Started with PM2 (first run)"
   fi
+
+  # Reload nginx if installed (picks up any config changes)
+  if command -v nginx &> /dev/null; then
+    systemctl reload nginx 2>/dev/null && echo "  ✓ Nginx reloaded" || true
+  fi
 else
   # Kill existing process on port 3001 if running
   PID=$(lsof -ti :3001 2>/dev/null || true)
