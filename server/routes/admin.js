@@ -20,7 +20,7 @@ import {
   manualSync
 } from '../services/syncService.js';
 import { resetMockScores, fetchHistoricalOdds, fetchHistoricalPlayerProps } from '../services/oddsService.js';
-import { recordOddsSnapshot, getAvailableKeys, getOddsHistory } from '../services/oddsHistoryService.js';
+import { recordOddsSnapshot, getAvailableKeys, getOddsHistory, sortAndDedupeHistory } from '../services/oddsHistoryService.js';
 
 const router = Router();
 
@@ -514,6 +514,11 @@ router.get('/odds-import', async (req, res) => {
         message: `Player props complete: ${callCount} API calls, ${snapshotCount} snapshots, ${pointsAdded} data points`,
       });
     }
+
+    // Sort and deduplicate all stored data for this event
+    send('status', { phase: 'cleaning', message: 'Sorting and deduplicating data...' });
+    sortAndDedupeHistory(eventId);
+    send('log', { level: 'success', message: 'Data sorted chronologically and duplicates removed.' });
 
     send('status', { phase: 'done', message: 'Historical odds import complete.' });
     send('done', { success: true });

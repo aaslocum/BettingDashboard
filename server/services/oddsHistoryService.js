@@ -102,6 +102,44 @@ export function recordOddsSnapshot(eventId, entries) {
 }
 
 /**
+ * Sort and deduplicate a single line array in place.
+ * Returns the cleaned array.
+ */
+function sortAndDedupeLine(line) {
+  // Sort by timestamp
+  line.sort((a, b) => new Date(a.t) - new Date(b.t));
+
+  // Deduplicate: remove consecutive entries with same value and point
+  if (line.length <= 1) return line;
+
+  const cleaned = [line[0]];
+  for (let i = 1; i < line.length; i++) {
+    const prev = cleaned[cleaned.length - 1];
+    // Keep if value or point changed
+    if (line[i].v !== prev.v || line[i].p !== prev.p) {
+      cleaned.push(line[i]);
+    }
+  }
+  return cleaned;
+}
+
+/**
+ * Sort and deduplicate all lines for an event, then save to disk.
+ */
+export function sortAndDedupeHistory(eventId) {
+  try {
+    const history = loadHistory(eventId);
+    for (const key of Object.keys(history.lines)) {
+      history.lines[key] = sortAndDedupeLine(history.lines[key]);
+    }
+    saveHistory(eventId, history);
+    return history;
+  } catch (err) {
+    console.error('Error sorting/deduping history:', err.message);
+  }
+}
+
+/**
  * Sort history entries by timestamp (needed after backfill inserts older data)
  */
 function sortHistory(eventId) {
@@ -136,7 +174,8 @@ export function getOddsHistory(eventId, oddsKey) {
       if (!line || line.length === 0) return [];
     }
 
-    return line;
+    // Always return sorted + deduped (handles out-of-order inserts from imports)
+    return sortAndDedupeLine([...line]);
   } catch {
     return [];
   }
