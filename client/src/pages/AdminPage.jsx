@@ -84,8 +84,10 @@ function AdminPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Controls */}
+        {/* Left Column - Controls (ordered by game phase) */}
         <div className="space-y-4">
+          {/* === SETUP PHASE === */}
+
           {/* Game Management */}
           <GameSettingsControl
             gameData={gameData}
@@ -135,6 +137,23 @@ function AdminPage() {
             }}
           />
 
+          {/* Grid Lock */}
+          <GridControl
+            locked={gameData.grid.locked}
+            squaresClaimed={gameData.grid.squares.filter(s => s !== null).length}
+            onLock={async () => {
+              try {
+                await apiCall('lock', {});
+                showMessage('Grid locked and numbers randomized');
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
+            onBulkAssign={() => setShowBulkAssignModal(true)}
+          />
+
+          {/* === GAME OPERATIONS === */}
+
           {/* Auto-Sync Control - Primary control for hands-off operation */}
           <AutoSyncControl
             syncStatus={syncStatus}
@@ -161,21 +180,6 @@ function AdminPage() {
             scores={gameData.scores}
           />
 
-          {/* Grid Lock */}
-          <GridControl
-            locked={gameData.grid.locked}
-            squaresClaimed={gameData.grid.squares.filter(s => s !== null).length}
-            onLock={async () => {
-              try {
-                await apiCall('lock', {});
-                showMessage('Grid locked and numbers randomized');
-              } catch (err) {
-                showMessage(err.message, 'error');
-              }
-            }}
-            onBulkAssign={() => setShowBulkAssignModal(true)}
-          />
-
           {/* Quarter Controls */}
           <QuarterControl
             quarters={gameData.quarters}
@@ -195,9 +199,6 @@ function AdminPage() {
             }}
           />
 
-          {/* Betting Ledger */}
-          <BetsAdmin gameId={currentGameId} />
-
           {/* Demo Score Controls */}
           <DemoScoreControl
             teams={gameData.teams}
@@ -214,6 +215,13 @@ function AdminPage() {
               }
             }}
           />
+
+          {/* === MONITORING === */}
+
+          {/* Betting Ledger */}
+          <BetsAdmin gameId={currentGameId} />
+
+          {/* === ADMINISTRATIVE === */}
 
           {/* Admin PIN Control */}
           <AdminPinControl gameId={currentGameId} showMessage={showMessage} />

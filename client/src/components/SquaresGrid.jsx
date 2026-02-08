@@ -124,7 +124,7 @@ function SquaresGrid({
   return (
     <div className="w-full max-w-3xl mx-auto">
       {/* Grid Header */}
-      <div className="text-center mb-2">
+      <div className="text-center mb-1">
         <span className="text-lg font-bold text-yellow-400">
           {teams.home.name}
         </span>
@@ -134,25 +134,47 @@ function SquaresGrid({
         </span>
       </div>
 
-      {/* The Grid */}
-      <div className="squares-grid bg-gray-900 p-1 rounded-lg">
-        {/* Top-left empty corner */}
-        <div className="square header bg-gray-800"></div>
+      {/* Grid with axis labels */}
+      <div className="flex items-stretch">
+        {/* Away team vertical label (left side of rows) */}
+        <div className="flex items-center justify-center flex-shrink-0" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+          <span className={`font-bold text-red-400 tracking-widest uppercase whitespace-nowrap ${displayMode ? 'text-xs' : 'text-[10px]'}`}>
+            {teams.away.abbreviation || teams.away.name}
+          </span>
+        </div>
 
-        {/* Home team numbers (top row) */}
-        {[...Array(10)].map((_, i) => (
-          <div key={`home-${i}`} className="square header bg-blue-900">
-            {locked ? homeNumbers[i] : '?'}
+        <div className="flex-1 min-w-0">
+          {/* Home team horizontal label (above columns) */}
+          <div className="flex items-center justify-center gap-1 mb-0.5" style={{ marginLeft: 'calc(100% / 11)' }}>
+            <span className="text-[10px] text-gray-500">{'\u2190'}</span>
+            <span className={`font-bold text-blue-400 tracking-widest uppercase ${displayMode ? 'text-xs' : 'text-[10px]'}`}>
+              {teams.home.abbreviation || teams.home.name}
+            </span>
+            <span className="text-[10px] text-gray-500">{'\u2192'}</span>
           </div>
-        ))}
 
-        {/* Grid rows with away team numbers */}
-        {[...Array(10)].map((_, row) => (
-          <div key={`row-${row}`} className="contents">
-            {/* Away team number (left column) */}
-            <div className="square header bg-red-900">
-              {locked ? awayNumbers[row] : '?'}
+          {/* The Grid */}
+          <div className="squares-grid bg-gray-900 p-1 rounded-lg">
+            {/* Top-left corner cell with axis indicator */}
+            <div className="square header bg-gray-800 flex flex-col items-center justify-center !text-[6px] leading-tight font-bold !cursor-default">
+              <span className="text-blue-400">{(teams.home.abbreviation || 'H').substring(0, 3)}{'\u2192'}</span>
+              <span className="text-red-400">{(teams.away.abbreviation || 'A').substring(0, 3)}{'\u2193'}</span>
             </div>
+
+            {/* Home team numbers (top row) */}
+            {[...Array(10)].map((_, i) => (
+              <div key={`home-${i}`} className="square header bg-blue-900">
+                {locked ? homeNumbers[i] : '?'}
+              </div>
+            ))}
+
+            {/* Grid rows with away team numbers */}
+            {[...Array(10)].map((_, row) => (
+              <div key={`row-${row}`} className="contents">
+                {/* Away team number (left column) */}
+                <div className="square header bg-red-900">
+                  {locked ? awayNumbers[row] : '?'}
+                </div>
 
             {/* Squares in this row */}
             {[...Array(10)].map((_, col) => {
@@ -186,7 +208,9 @@ function SquaresGrid({
             })}
           </div>
         ))}
-      </div>
+          </div>
+        </div>{/* end flex-1 */}
+      </div>{/* end flex wrapper */}
 
       {/* Likelihood Legend - shown when grid is locked */}
       {locked && showLikelihood && !displayMode && (
@@ -210,6 +234,19 @@ function SquaresGrid({
               <span>Winner</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Axis key */}
+      {!displayMode && (
+        <div className="flex justify-center gap-4 mt-1 text-[10px]">
+          <span className="text-blue-400 font-semibold">
+            {'\u2190'} {teams.home.abbreviation || teams.home.name} across top {'\u2192'}
+          </span>
+          <span className="text-gray-600">|</span>
+          <span className="text-red-400 font-semibold">
+            {'\u2193'} {teams.away.abbreviation || teams.away.name} down left
+          </span>
         </div>
       )}
 
