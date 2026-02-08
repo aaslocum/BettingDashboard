@@ -5,6 +5,7 @@ import { getTeamStats, getPlayerGameStats } from '../services/statsService.js';
 import { getGameData, updateTeams } from '../services/dataService.js';
 import { getDefaultGameId } from '../services/gamesService.js';
 import { getTeamAbbreviation } from '../services/syncService.js';
+import { shouldUseMockData } from '../services/gameTimeService.js';
 
 const router = Router();
 
@@ -37,10 +38,14 @@ router.get('/', async (req, res) => {
   try {
     const apiKey = process.env.ODDS_API_KEY;
 
-    // If no API key, return mock data
+    // If no API key: use mock data only if >6h before game, otherwise return empty
     if (!apiKey) {
-      console.log('No ODDS_API_KEY configured, returning mock data');
-      return res.json(getMockOdds());
+      if (shouldUseMockData()) {
+        console.log('No ODDS_API_KEY configured, returning mock data');
+        return res.json(getMockOdds());
+      }
+      console.log('No ODDS_API_KEY configured and near game time, returning empty odds');
+      return res.json({ games: [], noData: true, mock: false });
     }
 
     const odds = await fetchSuperBowlOdds(apiKey);
@@ -48,6 +53,10 @@ router.get('/', async (req, res) => {
     res.json(odds);
   } catch (error) {
     console.error('Error fetching odds:', error);
+    // On error near game time, return empty instead of mock
+    if (!shouldUseMockData()) {
+      return res.status(500).json({ error: error.message, games: [], noData: true, mock: false });
+    }
     res.status(500).json({
       error: error.message,
       mock: true,
@@ -62,16 +71,23 @@ router.get('/props', async (req, res) => {
     const apiKey = process.env.ODDS_API_KEY;
     const { eventId } = req.query;
 
-    // If no API key, return mock data
+    // If no API key: use mock data only if >6h before game, otherwise return empty
     if (!apiKey) {
-      console.log('No ODDS_API_KEY configured, returning mock player props');
-      return res.json(getMockPlayerProps());
+      if (shouldUseMockData()) {
+        console.log('No ODDS_API_KEY configured, returning mock player props');
+        return res.json(getMockPlayerProps());
+      }
+      console.log('No ODDS_API_KEY configured and near game time, returning empty props');
+      return res.json({ games: [], noData: true, mock: false });
     }
 
     const props = await fetchPlayerProps(apiKey, eventId);
     res.json(props);
   } catch (error) {
     console.error('Error fetching player props:', error);
+    if (!shouldUseMockData()) {
+      return res.status(500).json({ error: error.message, games: [], noData: true, mock: false });
+    }
     res.status(500).json({
       error: error.message,
       mock: true,

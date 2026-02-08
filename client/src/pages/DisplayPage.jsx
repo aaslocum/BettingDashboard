@@ -155,18 +155,19 @@ function DisplayPage() {
         </div>
       )}
 
-      {/* NBC-Style Header - compact */}
-      <div className="nbc-main-title display-title-compact mb-2">
-        <h1>{gameData?.name?.toUpperCase() || 'SUPER BOWL SQUARES'}</h1>
+      {/* NBC-Style Header - Team Matchup */}
+      <div className="nbc-main-title display-title-compact mb-1">
+        <h1>
+          {gameData?.teams?.away?.name && gameData?.teams?.home?.name
+            ? `${gameData.teams.away.name.toUpperCase()} VS ${gameData.teams.home.name.toUpperCase()}`
+            : gameData?.name?.toUpperCase() || 'SUPER BOWL SQUARES'}
+        </h1>
       </div>
 
       {/* Main Content - fills remaining space above ticker */}
-      <div className="grid grid-cols-12 gap-2 flex-1 min-h-0 mb-8">
+      <div className="grid grid-cols-12 gap-1.5 flex-1 min-h-0 mb-6">
         {/* Left Side - Rotating Panels */}
-        <div className="col-span-3 flex flex-col gap-2 overflow-hidden">
-          {/* Odds Display (always visible) */}
-          <OddsDisplay oddsData={oddsData} displayMode />
-
+        <div className="col-span-3 flex flex-col gap-1 overflow-hidden">
           {/* Rotating Panel */}
           <div className="flex-1 overflow-hidden min-h-0">
             <RotatingPanel
@@ -189,12 +190,12 @@ function DisplayPage() {
 
           {/* QR Code to join */}
           <div className="nbc-panel">
-            <div className="p-2 text-center">
-              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Join the Game</div>
-              <div className="inline-block p-2 rounded" style={{ background: 'white' }}>
-                <QRCode url={`${window.location.origin}/`} size={80} />
+            <div className="p-1.5 text-center">
+              <div className="text-[8px] text-gray-500 uppercase tracking-wider mb-0.5">Join the Game</div>
+              <div className="inline-block p-1.5 rounded" style={{ background: 'white' }}>
+                <QRCode url={`${window.location.origin}/`} size={64} />
               </div>
-              <div className="text-[10px] text-gray-500 mt-1">{window.location.host}</div>
+              <div className="text-[9px] text-gray-500 mt-0.5">{window.location.host}</div>
             </div>
           </div>
         </div>
@@ -204,9 +205,9 @@ function DisplayPage() {
           <div className="nbc-panel flex-1 flex flex-col min-h-0">
             <div className="nbc-panel-header display-panel-header-compact">
               <span className="nbc-header-accent"></span>
-              <h3 className="nbc-panel-title">SQUARES POOL - {formatCurrency(gameData?.totalPool || 100)} POT</h3>
+              <h3 className="nbc-panel-title">SQUARES POOL &mdash; {formatCurrency(gameData?.totalPool || 100)} POT</h3>
             </div>
-            <div className="flex-1 p-2 flex items-center justify-center min-h-0">
+            <div className="flex-1 p-1 flex items-center justify-center min-h-0">
               <SquaresGrid
                 gameData={gameData}
                 displayMode
@@ -217,8 +218,8 @@ function DisplayPage() {
           </div>
         </div>
 
-        {/* Right Side - Scoreboard & Stats */}
-        <div className="col-span-3 flex flex-col gap-2 overflow-hidden min-h-0">
+        {/* Right Side - Scoreboard, Stats & Odds */}
+        <div className="col-span-3 flex flex-col gap-1 overflow-hidden min-h-0">
           <NBCScoreboard gameData={gameData} activeQuarter={activeQuarter} />
 
           {/* Current Winner Preview */}
@@ -227,10 +228,13 @@ function DisplayPage() {
           )}
 
           {/* Quarter Winners & Player Stats - scrollable if needed */}
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
             <WinnersPanel quarters={gameData.quarters} displayMode />
             <PlayerStats gameData={gameData} displayMode />
           </div>
+
+          {/* Betting Odds - bottom of right column */}
+          <OddsDisplay oddsData={oddsData} displayMode />
         </div>
       </div>
 
@@ -367,7 +371,7 @@ function NBCScoreboard({ gameData, activeQuarter }) {
           return (
             <div
               key={key}
-              className={`text-center py-1 text-[10px] font-bold tracking-wider ${
+              className={`text-center py-0.5 text-[9px] font-bold tracking-wider ${
                 isActive ? 'text-yellow-400' : isCompleted ? 'text-green-400' : 'text-gray-600'
               }`}
               style={{
@@ -402,11 +406,11 @@ function CurrentWinnerPreview({ gameData }) {
         <span className="nbc-header-accent"></span>
         <h3 className="nbc-panel-title">WINNING SQUARE</h3>
       </div>
-      <div className="p-2 text-center">
-        <div className="text-2xl font-extrabold text-nbc-gold mb-1">
+      <div className="p-1.5 text-center">
+        <div className="text-xl font-extrabold text-nbc-gold mb-0.5">
           {currentWinner || '???'}
         </div>
-        <div className="text-xs text-gray-400">
+        <div className="text-[10px] text-gray-400">
           {teams.away.abbreviation} {awayLastDigit} - {teams.home.abbreviation} {homeLastDigit}
         </div>
       </div>

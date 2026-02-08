@@ -39,6 +39,22 @@ function PlayerGameStats({ displayMode = false }) {
 
   if (!playerStats) return null;
 
+  // If no real data available, show waiting state
+  if (playerStats.noData) {
+    return (
+      <div className="nbc-panel">
+        <div className="nbc-panel-header">
+          <span className="nbc-header-accent"></span>
+          <h3 className="nbc-panel-title">PLAYER STATS</h3>
+        </div>
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <span className="text-2xl mb-2">⏳</span>
+          <span className="text-xs text-gray-500">Stats available at kickoff</span>
+        </div>
+      </div>
+    );
+  }
+
   const categories = [
     { key: 'passing', label: 'PASSING' },
     { key: 'rushing', label: 'RUSHING' },

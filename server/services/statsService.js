@@ -1,11 +1,12 @@
 // Game statistics service
-// Uses ESPN API for live data, falls back to mock data
+// Uses ESPN API for live data, falls back to mock data or zeros near game time
 
 import {
   getCurrentGameId,
   getTeamStatistics,
   getPlayerStatistics
 } from './espnService.js';
+import { shouldUseMockData } from './gameTimeService.js';
 
 // Mock data for when ESPN is unavailable or no game is live
 const mockTeamStats = {
@@ -56,6 +57,24 @@ const mockPlayerStats = {
   ]
 };
 
+// Empty data for when no real stats are available near game time
+const emptyTeamStats = {
+  home: {
+    totalYards: 0, passingYards: 0, rushingYards: 0, firstDowns: 0,
+    thirdDownPct: '0/0 (0%)', turnovers: 0, timeOfPossession: '00:00', sacks: 0, penalties: '0-0'
+  },
+  away: {
+    totalYards: 0, passingYards: 0, rushingYards: 0, firstDowns: 0,
+    thirdDownPct: '0/0 (0%)', turnovers: 0, timeOfPossession: '00:00', sacks: 0, penalties: '0-0'
+  }
+};
+
+const emptyPlayerStats = {
+  passing: [],
+  rushing: [],
+  receiving: []
+};
+
 // Configuration
 let useEspnApi = true;
 let cachedTeamStats = null;
@@ -90,8 +109,12 @@ export async function getTeamStats() {
     }
   }
 
-  // Fall back to mock data
-  cachedTeamStats = { ...mockTeamStats, source: 'mock', mock: true };
+  // Fall back to mock data only if more than 6 hours before game
+  if (shouldUseMockData()) {
+    cachedTeamStats = { ...mockTeamStats, source: 'mock', mock: true };
+  } else {
+    cachedTeamStats = { ...emptyTeamStats, source: 'none', mock: false, noData: true };
+  }
   cacheTimestamp = now;
   return cachedTeamStats;
 }
@@ -123,8 +146,12 @@ export async function getPlayerGameStats() {
     }
   }
 
-  // Fall back to mock data
-  cachedPlayerStats = { ...mockPlayerStats, source: 'mock', mock: true };
+  // Fall back to mock data only if more than 6 hours before game
+  if (shouldUseMockData()) {
+    cachedPlayerStats = { ...mockPlayerStats, source: 'mock', mock: true };
+  } else {
+    cachedPlayerStats = { ...emptyPlayerStats, source: 'none', mock: false, noData: true };
+  }
   cacheTimestamp = now;
   return cachedPlayerStats;
 }

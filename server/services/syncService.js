@@ -1,6 +1,7 @@
 import { getMockScores, getMockOdds } from './oddsService.js';
 import { getGameData, updateScores, updateTeams } from './dataService.js';
 import { getLiveScores, setCurrentGameId } from './espnService.js';
+import { shouldUseMockData } from './gameTimeService.js';
 
 // Auto-sync state
 let syncState = {
@@ -101,8 +102,8 @@ async function performSync(apiKey) {
       }
     }
 
-    // Fall back to mock data if ESPN failed or disabled
-    if (!teamsData && syncState.useMockData) {
+    // Fall back to mock data if ESPN failed or disabled (only if >6h before game)
+    if (!teamsData && syncState.useMockData && shouldUseMockData()) {
       const mockData = getMockScores(true);
       const game = mockData.games[0];
       if (game) {

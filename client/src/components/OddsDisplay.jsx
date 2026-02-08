@@ -50,7 +50,7 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
 
       {oddsData.mock && (
         <div className="text-center text-xs mb-3" style={{ color: 'var(--nbc-gold)' }}>
-          Demo data - Add ODDS_API_KEY for live odds
+          ⚠️ Demo data - Add ODDS_API_KEY for live odds
         </div>
       )}
 

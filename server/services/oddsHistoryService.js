@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { shouldUseMockData } from './gameTimeService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -166,9 +167,10 @@ export function getOddsHistory(eventId, oddsKey) {
 
     const line = history.lines[oddsKey];
 
-    // If little/no data and this looks like a mock event, generate synthetic 2-week history
+    // If little/no data and this looks like a mock event, generate synthetic history
+    // but only if we're more than 6 hours before game time
     if (!line || line.length < 5) {
-      if (eventId.includes('mock') || eventId.includes('superbowl-lx')) {
+      if (shouldUseMockData() && (eventId.includes('mock') || eventId.includes('superbowl-lx'))) {
         return generateMockHistory(oddsKey);
       }
       if (!line || line.length === 0) return [];

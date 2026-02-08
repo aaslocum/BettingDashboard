@@ -123,16 +123,18 @@ function SquaresGrid({
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* Grid Header */}
-      <div className="text-center mb-1">
-        <span className="text-lg font-bold text-yellow-400">
-          {teams.home.name}
-        </span>
-        <span className="text-gray-400 mx-2">vs</span>
-        <span className="text-lg font-bold text-yellow-400">
-          {teams.away.name}
-        </span>
-      </div>
+      {/* Grid Header - hidden in display mode since page header shows matchup */}
+      {!displayMode && (
+        <div className="text-center mb-1">
+          <span className="text-lg font-bold text-yellow-400">
+            {teams.home.name}
+          </span>
+          <span className="text-gray-400 mx-2">vs</span>
+          <span className="text-lg font-bold text-yellow-400">
+            {teams.away.name}
+          </span>
+        </div>
+      )}
 
       {/* Grid with axis labels */}
       <div className="flex items-stretch">

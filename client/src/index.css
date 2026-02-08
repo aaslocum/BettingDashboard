@@ -505,37 +505,37 @@
 
 /* Tablet-compact display overrides */
 .display-title-compact {
-  padding: 6px 16px;
-  margin-bottom: 4px;
+  padding: 4px 12px;
+  margin-bottom: 2px;
   border-bottom-width: 2px;
 }
 
 .display-title-compact h1 {
-  font-size: 18px;
-  letter-spacing: 0.12em;
+  font-size: 15px;
+  letter-spacing: 0.1em;
 }
 
 .display-title-compact::before,
 .display-title-compact::after {
-  width: 40px;
+  width: 30px;
   height: 2px;
 }
 
 .display-panel-header-compact {
-  padding: 6px 12px;
+  padding: 4px 10px;
 }
 
 .display-score-row-compact {
-  padding: 6px 12px;
+  padding: 4px 10px;
 }
 
 .display-team-compact {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .display-score-compact {
-  font-size: 24px;
-  min-width: 45px;
+  font-size: 22px;
+  min-width: 40px;
 }
 
 .nbc-ticker-compact {
@@ -543,7 +543,8 @@
 }
 
 .nbc-ticker-compact .nbc-ticker-content {
-  padding: 4px 0;
+  padding: 3px 0;
+  font-size: 12px;
 }
 
 /* Scale grid squares down for tablet */
@@ -706,62 +707,67 @@
 
 /* Display mode tablet-compact overrides for all nested components */
 .display-mode .nbc-panel-header {
-  padding: 5px 10px;
-  gap: 6px;
+  padding: 3px 8px;
+  gap: 5px;
 }
 
 .display-mode .nbc-panel-header .nbc-header-accent {
-  height: 12px;
-  width: 3px;
+  height: 10px;
+  width: 2px;
 }
 
 .display-mode .nbc-panel-title {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .display-mode .nbc-quarter-row {
-  padding: 4px 8px;
+  padding: 3px 6px;
 }
 
 .display-mode .nbc-quarter-label {
-  font-size: 10px;
-  width: 50px;
+  font-size: 9px;
+  width: 45px;
 }
 
 .display-mode .nbc-quarter-winner {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .display-mode .nbc-quarter-prize {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .display-mode .nbc-stat-table-header {
-  padding: 4px 6px;
-  font-size: 8px;
+  padding: 3px 5px;
+  font-size: 7px;
 }
 
 .display-mode .nbc-stat-table-row {
-  padding: 4px 6px;
-  font-size: 10px;
+  padding: 3px 5px;
+  font-size: 9px;
 }
 
 .display-mode .nbc-scoreboard-header {
-  padding: 4px 8px;
-  font-size: 9px;
+  padding: 3px 6px;
+  font-size: 8px;
 }
 
 /* Compact odds in display mode */
 .display-mode .nbc-panel .p-3 {
-  padding: 6px;
+  padding: 4px;
 }
 
 .display-mode .nbc-panel .space-y-3 > * + * {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .display-mode .nbc-panel .bg-black\/30 {
-  padding: 4px 6px;
+  padding: 3px 5px;
+}
+
+/* Compact nbc-panel in display mode */
+.display-mode .nbc-panel {
+  border-width: 1px;
 }
 
 /* Display mode likelihood enhancements */
