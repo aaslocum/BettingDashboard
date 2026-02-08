@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { calculatePlayerStats, formatCurrency, getQuarterName } from '../utils/helpers';
+import { calculatePlayerStats, formatCurrency, getQuarterName, getPlayerColor } from '../utils/helpers';
 
 function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false }) {
   const { players, totals } = useMemo(
@@ -79,7 +79,12 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
               >
                 <div className="flex-1 flex items-center gap-2">
                   <span className="text-gray-500 text-xs w-4">{idx + 1}</span>
-                  <span className="font-semibold">{player.initials}</span>
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
+                    style={{ background: getPlayerColor(player.initials), color: '#fff' }}
+                  >
+                    {player.initials}
+                  </div>
                   {player.quarterWins.length > 0 && (
                     <span className="text-xs text-nbc-gold">
                       ({player.quarterWins.length}W)
@@ -182,7 +187,17 @@ function PlayerStats({ gameData, displayMode = false, showCollectionInfo = false
           <tbody>
             {players.map(player => (
               <tr key={player.initials} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td className="py-2 font-semibold">{player.initials}</td>
+                <td className="py-2">
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
+                      style={{ background: getPlayerColor(player.initials), color: '#fff' }}
+                    >
+                      {player.initials.charAt(0)}
+                    </div>
+                    <span className="font-semibold">{player.initials}</span>
+                  </div>
+                </td>
                 <td className="text-center py-2 text-gray-400">{player.squareCount}</td>
                 <td className="text-right py-2 text-gray-400">
                   {formatCurrency(player.betAmount)}

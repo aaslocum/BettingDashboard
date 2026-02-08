@@ -5,7 +5,13 @@ import {
   updateTeams,
   updateScores,
   lockAndRandomize,
-  markQuarterWinner
+  markQuarterWinner,
+  unmarkQuarterWinner,
+  getAuditLog,
+  setAdminPin,
+  verifyAdminPin,
+  clearAdminPin,
+  hasAdminPin
 } from '../services/dataService.js';
 import {
   getSyncStatus,
@@ -141,6 +147,85 @@ router.post('/sync/now', async (req, res) => {
     res.json({ message: 'Manual sync completed', status });
   } catch (error) {
     console.error('Error during manual sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/quarter/undo - Undo a quarter winner
+router.post('/quarter/undo', (req, res) => {
+  try {
+    const { quarter, gameId } = req.body;
+
+    if (!quarter || !['q1', 'q2', 'q3', 'q4'].includes(quarter)) {
+      return res.status(400).json({ error: 'Valid quarter (q1, q2, q3, q4) required' });
+    }
+
+    const data = unmarkQuarterWinner(quarter, gameId);
+    res.json({ message: `Quarter ${quarter} winner undone`, data });
+  } catch (error) {
+    console.error('Error undoing quarter:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// --- Admin PIN ---
+
+// GET /api/admin/pin/status - Check if PIN is set
+router.get('/pin/status', (req, res) => {
+  try {
+    const gameId = req.query.gameId;
+    const hasPIN = hasAdminPin(gameId);
+    res.json({ hasPin: hasPIN });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/pin/verify - Verify admin PIN
+router.post('/pin/verify', (req, res) => {
+  try {
+    const { gameId, pin } = req.body;
+    const valid = verifyAdminPin(gameId, pin);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid PIN' });
+    }
+    res.json({ valid: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/pin/set - Set admin PIN
+router.post('/pin/set', (req, res) => {
+  try {
+    const { gameId, pin } = req.body;
+    const result = setAdminPin(gameId, pin);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/pin/clear - Remove admin PIN
+router.post('/pin/clear', (req, res) => {
+  try {
+    const { gameId } = req.body;
+    const result = clearAdminPin(gameId);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// --- Audit Log ---
+
+// GET /api/admin/audit-log - Get audit log
+router.get('/audit-log', (req, res) => {
+  try {
+    const gameId = req.query.gameId;
+    const log = getAuditLog(gameId);
+    res.json({ log });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

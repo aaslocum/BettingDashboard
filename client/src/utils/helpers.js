@@ -183,3 +183,29 @@ export function calculatePlayerStats(gameData) {
 
   return { players: stats, totals };
 }
+
+// Player color palette for social features
+const PLAYER_COLORS = [
+  '#3B82F6', // blue
+  '#EF4444', // red
+  '#22C55E', // green
+  '#F59E0B', // amber
+  '#A855F7', // purple
+  '#EC4899', // pink
+  '#14B8A6', // teal
+  '#F97316', // orange
+  '#6366F1', // indigo
+  '#06B6D4', // cyan
+  '#84CC16', // lime
+  '#E11D48', // rose
+];
+
+// Get a consistent color for a player based on their initials
+export function getPlayerColor(initials) {
+  if (!initials) return PLAYER_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) {
+    hash = initials.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return PLAYER_COLORS[Math.abs(hash) % PLAYER_COLORS.length];
+}

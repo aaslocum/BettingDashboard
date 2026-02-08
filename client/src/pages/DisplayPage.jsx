@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
 import { useGameContext } from '../context/GameContext';
 import SquaresGrid from '../components/SquaresGrid';
@@ -9,10 +9,15 @@ import PlayerGameStats from '../components/PlayerGameStats';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, getQuarterName } from '../utils/helpers';
 
 const PANEL_TYPES = ['props', 'teamStats', 'playerStats'];
-const PANEL_DURATION = 10000; // 10 seconds per panel
+const SPEED_OPTIONS = [
+  { label: '5s', value: 5000 },
+  { label: '10s', value: 10000 },
+  { label: '15s', value: 15000 },
+  { label: '30s', value: 30000 },
+];
 
 // Build game context for likelihood calculations
 function buildGameContext(gameData) {
@@ -35,20 +40,53 @@ function buildGameContext(gameData) {
   };
 }
 
+// Determine which quarter is currently active (in play, not yet completed)
+function getActiveQuarter(quarters) {
+  if (!quarters.q1.completed) return 'q1';
+  if (!quarters.q2.completed) return 'q2';
+  if (!quarters.q3.completed) return 'q3';
+  if (!quarters.q4.completed) return 'q4';
+  return null;
+}
+
 function DisplayPage() {
   const { currentGameId } = useGameContext();
   const { gameData, loading, error } = useGameData(2000, currentGameId);
   const { oddsData } = useOddsData(15000);
   const { propsData } = usePlayerProps(30000);
   const [activePanel, setActivePanel] = useState(0);
+  const [panelDuration, setPanelDuration] = useState(10000);
+  const [showSettings, setShowSettings] = useState(false);
+  const [winnerAnimation, setWinnerAnimation] = useState(null);
+  const prevQuartersRef = useRef(null);
 
   // Auto-rotate panels
   useEffect(() => {
     const interval = setInterval(() => {
       setActivePanel(prev => (prev + 1) % PANEL_TYPES.length);
-    }, PANEL_DURATION);
+    }, panelDuration);
     return () => clearInterval(interval);
-  }, []);
+  }, [panelDuration]);
+
+  // Detect new quarter winners for animation
+  useEffect(() => {
+    if (!gameData?.quarters) return;
+    const prev = prevQuartersRef.current;
+    if (prev) {
+      for (const key of ['q1', 'q2', 'q3', 'q4']) {
+        if (!prev[key]?.completed && gameData.quarters[key]?.completed && gameData.quarters[key]?.winner) {
+          setWinnerAnimation({
+            quarter: key,
+            winner: gameData.quarters[key].winner.player,
+            prize: gameData.quarters[key].prize,
+          });
+          setTimeout(() => setWinnerAnimation(null), 6000);
+          break;
+        }
+      }
+    }
+    prevQuartersRef.current = JSON.parse(JSON.stringify(gameData.quarters));
+  }, [gameData?.quarters]);
 
   if (loading) {
     return (
@@ -68,8 +106,55 @@ function DisplayPage() {
 
   if (!gameData) return null;
 
+  const activeQuarter = getActiveQuarter(gameData.quarters);
+
   return (
     <div className="overflow-hidden p-2 display-mode flex flex-col" style={{ height: '100dvh' }}>
+      {/* Winner Animation Overlay */}
+      {winnerAnimation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
+          <div className="text-center animate-bounce">
+            <div className="text-sm font-bold text-gray-400 tracking-widest uppercase mb-2">
+              {getQuarterName(winnerAnimation.quarter)} Winner
+            </div>
+            <div className="text-6xl font-extrabold mb-4" style={{ color: 'var(--nbc-gold)' }}>
+              {winnerAnimation.winner}
+            </div>
+            <div className="text-3xl font-bold text-green-400">
+              {formatCurrency(winnerAnimation.prize)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Toggle (small gear in corner) */}
+      <button
+        onClick={() => setShowSettings(!showSettings)}
+        className="fixed top-2 right-2 z-40 text-gray-600 hover:text-gray-400 text-sm"
+      >
+        {showSettings ? 'X' : 'Settings'}
+      </button>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="fixed top-8 right-2 z-40 rounded p-3 space-y-2" style={{ background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', minWidth: '180px' }}>
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Panel Rotation</div>
+          <div className="flex gap-1">
+            {SPEED_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setPanelDuration(opt.value)}
+                className={`flex-1 py-1 rounded text-xs font-semibold transition-colors ${
+                  panelDuration === opt.value ? 'bg-yellow-600 text-black' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* NBC-Style Header - compact */}
       <div className="nbc-main-title display-title-compact mb-2">
         <h1>{gameData?.name?.toUpperCase() || 'SUPER BOWL SQUARES'}</h1>
@@ -101,6 +186,17 @@ function DisplayPage() {
               />
             ))}
           </div>
+
+          {/* QR Code to join */}
+          <div className="nbc-panel">
+            <div className="p-2 text-center">
+              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Join the Game</div>
+              <div className="inline-block p-2 rounded" style={{ background: 'white' }}>
+                <QRCode url={`${window.location.origin}/`} size={80} />
+              </div>
+              <div className="text-[10px] text-gray-500 mt-1">{window.location.host}</div>
+            </div>
+          </div>
         </div>
 
         {/* Center - Grid */}
@@ -123,7 +219,7 @@ function DisplayPage() {
 
         {/* Right Side - Scoreboard & Stats */}
         <div className="col-span-3 flex flex-col gap-2 overflow-hidden min-h-0">
-          <NBCScoreboard gameData={gameData} />
+          <NBCScoreboard gameData={gameData} activeQuarter={activeQuarter} />
 
           {/* Current Winner Preview */}
           {gameData.grid.locked && (
@@ -148,6 +244,77 @@ function DisplayPage() {
   );
 }
 
+// Simple text-based QR code component (no external dependency needed)
+function QRCode({ url, size = 80 }) {
+  // Use a simple visual representation - just the URL text in a scannable box
+  // For a real QR code you'd use a library, but this avoids adding dependencies
+  return (
+    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#000', fontWeight: 'bold', wordBreak: 'break-all', textAlign: 'center', lineHeight: 1.2 }}>
+      <svg viewBox="0 0 100 100" width={size} height={size}>
+        {/* Simplified QR-like pattern */}
+        <rect x="0" y="0" width="100" height="100" fill="white"/>
+        {/* Corner squares */}
+        <rect x="5" y="5" width="25" height="25" fill="black"/>
+        <rect x="8" y="8" width="19" height="19" fill="white"/>
+        <rect x="11" y="11" width="13" height="13" fill="black"/>
+        <rect x="70" y="5" width="25" height="25" fill="black"/>
+        <rect x="73" y="8" width="19" height="19" fill="white"/>
+        <rect x="76" y="11" width="13" height="13" fill="black"/>
+        <rect x="5" y="70" width="25" height="25" fill="black"/>
+        <rect x="8" y="73" width="19" height="19" fill="white"/>
+        <rect x="11" y="76" width="13" height="13" fill="black"/>
+        {/* Data pattern */}
+        <rect x="35" y="5" width="5" height="5" fill="black"/>
+        <rect x="45" y="5" width="5" height="5" fill="black"/>
+        <rect x="55" y="5" width="5" height="5" fill="black"/>
+        <rect x="35" y="15" width="5" height="5" fill="black"/>
+        <rect x="50" y="15" width="5" height="5" fill="black"/>
+        <rect x="35" y="25" width="5" height="5" fill="black"/>
+        <rect x="45" y="25" width="5" height="5" fill="black"/>
+        <rect x="60" y="25" width="5" height="5" fill="black"/>
+        <rect x="5" y="35" width="5" height="5" fill="black"/>
+        <rect x="15" y="35" width="5" height="5" fill="black"/>
+        <rect x="25" y="35" width="5" height="5" fill="black"/>
+        <rect x="35" y="35" width="5" height="5" fill="black"/>
+        <rect x="45" y="35" width="5" height="5" fill="black"/>
+        <rect x="55" y="35" width="5" height="5" fill="black"/>
+        <rect x="65" y="35" width="5" height="5" fill="black"/>
+        <rect x="75" y="35" width="5" height="5" fill="black"/>
+        <rect x="85" y="35" width="5" height="5" fill="black"/>
+        <rect x="5" y="45" width="5" height="5" fill="black"/>
+        <rect x="25" y="45" width="5" height="5" fill="black"/>
+        <rect x="40" y="45" width="5" height="5" fill="black"/>
+        <rect x="55" y="45" width="5" height="5" fill="black"/>
+        <rect x="75" y="45" width="5" height="5" fill="black"/>
+        <rect x="5" y="55" width="5" height="5" fill="black"/>
+        <rect x="15" y="55" width="5" height="5" fill="black"/>
+        <rect x="25" y="55" width="5" height="5" fill="black"/>
+        <rect x="35" y="55" width="5" height="5" fill="black"/>
+        <rect x="50" y="55" width="5" height="5" fill="black"/>
+        <rect x="65" y="55" width="5" height="5" fill="black"/>
+        <rect x="80" y="55" width="5" height="5" fill="black"/>
+        <rect x="90" y="55" width="5" height="5" fill="black"/>
+        <rect x="35" y="65" width="5" height="5" fill="black"/>
+        <rect x="50" y="65" width="5" height="5" fill="black"/>
+        <rect x="60" y="65" width="5" height="5" fill="black"/>
+        <rect x="75" y="65" width="5" height="5" fill="black"/>
+        <rect x="85" y="65" width="5" height="5" fill="black"/>
+        <rect x="35" y="75" width="5" height="5" fill="black"/>
+        <rect x="45" y="75" width="5" height="5" fill="black"/>
+        <rect x="55" y="75" width="5" height="5" fill="black"/>
+        <rect x="70" y="75" width="5" height="5" fill="black"/>
+        <rect x="80" y="75" width="5" height="5" fill="black"/>
+        <rect x="35" y="85" width="5" height="5" fill="black"/>
+        <rect x="50" y="85" width="5" height="5" fill="black"/>
+        <rect x="65" y="85" width="5" height="5" fill="black"/>
+        <rect x="75" y="85" width="5" height="5" fill="black"/>
+        <rect x="90" y="85" width="5" height="5" fill="black"/>
+        <rect x="90" y="90" width="5" height="5" fill="black"/>
+      </svg>
+    </div>
+  );
+}
+
 function RotatingPanel({ activePanel, propsData, gameData }) {
   const panelType = PANEL_TYPES[activePanel];
 
@@ -166,7 +333,7 @@ function RotatingPanel({ activePanel, propsData, gameData }) {
   );
 }
 
-function NBCScoreboard({ gameData }) {
+function NBCScoreboard({ gameData, activeQuarter }) {
   const { teams, scores, quarters } = gameData;
 
   // Determine game status
@@ -179,6 +346,8 @@ function NBCScoreboard({ gameData }) {
     gameStatus = 'FINAL';
   }
 
+  const quarterLabels = { q1: 'Q1', q2: 'Q2', q3: 'Q3', q4: 'Q4' };
+
   return (
     <div className="nbc-scoreboard">
       <div className="nbc-scoreboard-header">{gameStatus}</div>
@@ -189,6 +358,27 @@ function NBCScoreboard({ gameData }) {
       <div className="nbc-score-row display-score-row-compact">
         <span className="nbc-team-name display-team-compact">{teams.home.abbreviation}</span>
         <span className="nbc-score display-score-compact">{scores.home}</span>
+      </div>
+      {/* Active Quarter Indicator */}
+      <div className="grid grid-cols-4 gap-0">
+        {Object.entries(quarterLabels).map(([key, label]) => {
+          const isActive = activeQuarter === key;
+          const isCompleted = quarters[key]?.completed;
+          return (
+            <div
+              key={key}
+              className={`text-center py-1 text-[10px] font-bold tracking-wider ${
+                isActive ? 'text-yellow-400' : isCompleted ? 'text-green-400' : 'text-gray-600'
+              }`}
+              style={{
+                background: isActive ? 'rgba(212,175,55,0.15)' : 'transparent',
+                borderBottom: isActive ? '2px solid var(--nbc-gold)' : '2px solid transparent'
+              }}
+            >
+              {label}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -57,6 +57,23 @@ function BetsAdmin({ gameId }) {
     finally { setSettling(null); }
   };
 
+  const handleBulkSettle = async (outcome) => {
+    const pendingCount = bets.filter(b => b.status === 'pending').length;
+    if (pendingCount === 0) return;
+    if (!confirm(`Mark all ${pendingCount} pending bets as "${outcome}"?`)) return;
+    try {
+      const response = await fetch('/api/game/bets/bulk-settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, outcome }),
+      });
+      if (response.ok) {
+        fetchBets();
+        fetchStats();
+      }
+    } catch (err) { /* silent */ }
+  };
+
   if (loading) {
     return (
       <div className="card">
@@ -114,55 +131,89 @@ function BetsAdmin({ gameId }) {
       {/* Pending Bets */}
       {pending.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-[10px] font-bold text-yellow-400 mb-2 uppercase tracking-widest">
-            Pending ({pending.length})
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">
+              Pending ({pending.length})
+            </h3>
+            {/* Bulk Settle Buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => handleBulkSettle('lost')}
+                className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-600/50 hover:bg-red-600 transition-colors"
+              >
+                All Lost
+              </button>
+              <button
+                onClick={() => handleBulkSettle('void')}
+                className="px-2 py-0.5 rounded text-[9px] font-bold bg-gray-600/50 hover:bg-gray-600 transition-colors"
+              >
+                Void All
+              </button>
+            </div>
+          </div>
           <div className="space-y-1.5">
-            {pending.map(bet => (
-              <div key={bet.id} className="rounded px-2.5 py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
-                        {bet.playerInitials}
-                      </span>
-                      <span className="text-xs text-white font-medium truncate">{bet.description}</span>
+            {pending.map(bet => {
+              const displayOdds = bet.type === 'parlay' ? bet.combinedOdds : bet.selection?.odds;
+              return (
+                <div key={bet.id} className="rounded px-2.5 py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
+                          {bet.playerInitials}
+                        </span>
+                        {bet.type === 'parlay' && (
+                          <span className="text-[8px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--nbc-gold)' }}>
+                            PARLAY
+                          </span>
+                        )}
+                        <span className="text-xs text-white font-medium truncate">{bet.description}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {displayOdds !== undefined && (
+                          <span className={`text-xs font-bold ${getOddsColorClass(displayOdds)}`}>
+                            {formatOdds(displayOdds)}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-500">
+                          {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`text-xs font-bold ${getOddsColorClass(bet.selection.odds)}`}>
-                        {formatOdds(bet.selection.odds)}
-                      </span>
-                      <span className="text-[10px] text-gray-500">
-                        {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
-                      </span>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleSettle(bet.id, 'won')}
+                        disabled={settling === bet.id}
+                        className="px-2 py-1 rounded text-[10px] font-bold bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        Won
+                      </button>
+                      <button
+                        onClick={() => handleSettle(bet.id, 'lost')}
+                        disabled={settling === bet.id}
+                        className="px-2 py-1 rounded text-[10px] font-bold bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        Lost
+                      </button>
+                      <button
+                        onClick={() => handleSettle(bet.id, 'push')}
+                        disabled={settling === bet.id}
+                        className="px-2 py-1 rounded text-[10px] font-bold bg-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50"
+                      >
+                        Push
+                      </button>
+                      <button
+                        onClick={() => handleSettle(bet.id, 'void')}
+                        disabled={settling === bet.id}
+                        className="px-2 py-1 rounded text-[10px] font-bold bg-purple-600/70 hover:bg-purple-600 transition-colors disabled:opacity-50"
+                      >
+                        Void
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => handleSettle(bet.id, 'won')}
-                      disabled={settling === bet.id}
-                      className="px-2 py-1 rounded text-[10px] font-bold bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                      Won
-                    </button>
-                    <button
-                      onClick={() => handleSettle(bet.id, 'lost')}
-                      disabled={settling === bet.id}
-                      className="px-2 py-1 rounded text-[10px] font-bold bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
-                    >
-                      Lost
-                    </button>
-                    <button
-                      onClick={() => handleSettle(bet.id, 'push')}
-                      disabled={settling === bet.id}
-                      className="px-2 py-1 rounded text-[10px] font-bold bg-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50"
-                    >
-                      Push
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -178,7 +229,9 @@ function BetsAdmin({ gameId }) {
               const statusColors = {
                 won: 'text-green-400',
                 lost: 'text-red-400',
-                push: 'text-gray-400'
+                push: 'text-gray-400',
+                void: 'text-purple-400',
+                cancelled: 'text-gray-500'
               };
               return (
                 <div key={bet.id} className="flex items-center justify-between rounded px-2.5 py-1.5 text-xs" style={{ background: 'rgba(0,0,0,0.15)' }}>
@@ -190,7 +243,7 @@ function BetsAdmin({ gameId }) {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-gray-500">{formatCurrency(bet.wager)}</span>
-                    <span className={`font-bold uppercase ${statusColors[bet.status]}`}>
+                    <span className={`font-bold uppercase ${statusColors[bet.status] || 'text-gray-400'}`}>
                       {bet.status}
                     </span>
                   </div>

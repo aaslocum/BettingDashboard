@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { formatOdds, getOddsColorClass, formatCurrency, calculateParlayMaxWager } from '../utils/helpers';
 
 function ParlayLegsSummary({
@@ -14,11 +14,20 @@ function ParlayLegsSummary({
   error,
   isValid
 }) {
+  const [confirming, setConfirming] = useState(false);
   const maxWager = useMemo(() => calculateParlayMaxWager(combinedDecimal, maxPayout), [combinedDecimal, maxPayout]);
   const parlayPayout = useMemo(() => {
     if (combinedDecimal <= 1 || !wager) return 0;
     return Math.round(wager * (combinedDecimal - 1) * 100) / 100;
   }, [combinedDecimal, wager]);
+
+  const handlePlaceClick = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    onPlace();
+  };
 
   return (
     <div className="px-3 py-3" style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
@@ -129,14 +138,31 @@ function ParlayLegsSummary({
             <div className="text-red-400 text-xs text-center mb-2">{error}</div>
           )}
 
+          {/* Confirmation Message */}
+          {confirming && (
+            <div className="text-center text-xs text-yellow-400 mb-2">
+              Confirm your {legs.length}-leg parlay?
+            </div>
+          )}
+
           {/* Place Parlay Button */}
-          <button
-            onClick={onPlace}
-            disabled={!isValid || placing}
-            className="btn-success w-full text-sm font-bold py-2.5"
-          >
-            {placing ? 'Placing...' : `Place ${legs.length}-Leg Parlay · ${formatCurrency(wager)}`}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePlaceClick}
+              disabled={!isValid || placing}
+              className={`flex-1 text-sm font-bold py-2.5 ${confirming ? 'btn-success' : 'btn-primary'}`}
+            >
+              {placing ? 'Placing...' : confirming ? `Confirm ${formatCurrency(wager)}` : `Place ${legs.length}-Leg Parlay · ${formatCurrency(wager)}`}
+            </button>
+            {confirming && (
+              <button
+                onClick={() => setConfirming(false)}
+                className="btn-secondary text-sm px-4"
+              >
+                Back
+              </button>
+            )}
+          </div>
         </>
       )}
 

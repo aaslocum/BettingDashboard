@@ -11,6 +11,7 @@ import BetSlipModal from '../components/BetSlipModal';
 import OddsHistoryModal from '../components/OddsHistoryModal';
 import ParlayModal from '../components/ParlayModal';
 import MyBets from '../components/MyBets';
+import BetFeed from '../components/BetFeed';
 import { formatCurrency } from '../utils/helpers';
 
 // Build game context for likelihood calculations
@@ -328,7 +329,7 @@ function PlayerPage() {
           <>
             {/* My Bets */}
             {selectedPlayer && myBets && myBets.length > 0 && (
-              <MyBets bets={myBets} />
+              <MyBets bets={myBets} gameId={currentGameId} playerId={selectedPlayer.id} onBetCancelled={refetchBets} />
             )}
 
             {/* Create Parlay Button */}
@@ -352,6 +353,9 @@ function PlayerPage() {
 
             {/* Player Props */}
             <PlayerPropsDisplay propsData={propsData} onBetClick={handleBetClick} onChartClick={handleChartClick} />
+
+            {/* Live Bet Feed */}
+            <BetFeed gameId={currentGameId} />
           </>
         )}
       </div>

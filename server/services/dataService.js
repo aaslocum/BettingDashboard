@@ -303,6 +303,38 @@ export function markQuarterWinner(quarter, gameId) {
     data.gameStatus = 'completed';
   }
 
+  addAuditEntry(data, 'quarter_marked', {
+    quarter,
+    winner: winner.player,
+    score: `${data.scores.away}-${data.scores.home}`
+  });
+
+  return saveGameData(data);
+}
+
+// Undo quarter winner
+export function unmarkQuarterWinner(quarter, gameId) {
+  const data = getGameData(gameId);
+
+  if (!data.quarters[quarter].completed) {
+    throw new Error(`${quarter} is not completed`);
+  }
+
+  const previousWinner = data.quarters[quarter].winner?.player;
+
+  data.quarters[quarter].completed = false;
+  data.quarters[quarter].winner = null;
+
+  // If it was Q4, revert game status from completed back to active
+  if (quarter === 'q4' && data.gameStatus === 'completed') {
+    data.gameStatus = 'active';
+  }
+
+  addAuditEntry(data, 'quarter_unmarked', {
+    quarter,
+    previousWinner
+  });
+
   return saveGameData(data);
 }
 
@@ -624,6 +656,31 @@ export function getBets(gameId, playerId = null) {
   return data.bets;
 }
 
+// Cancel a pending bet (player action)
+export function cancelBet(gameId, betId, playerId) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+
+  const bet = data.bets.find(b => b.id === betId);
+  if (!bet) throw new Error('Bet not found');
+  if (bet.status !== 'pending') throw new Error('Only pending bets can be cancelled');
+  if (playerId && bet.playerId !== playerId) throw new Error('You can only cancel your own bets');
+
+  bet.status = 'cancelled';
+  bet.settledAt = new Date().toISOString();
+  bet.result = { payout: 0 };
+
+  addAuditEntry(data, 'bet_cancelled', {
+    betId: bet.id,
+    player: bet.playerInitials,
+    description: bet.description,
+    wager: bet.wager
+  });
+
+  saveGameData(data);
+  return bet;
+}
+
 // Settle a single bet
 export function settleBet(gameId, betId, outcome) {
   const data = getGameData(gameId);
@@ -639,8 +696,44 @@ export function settleBet(gameId, betId, outcome) {
     payout: outcome === 'won' ? bet.potentialPayout : 0
   };
 
+  addAuditEntry(data, 'bet_settled', {
+    betId: bet.id,
+    player: bet.playerInitials,
+    description: bet.description,
+    outcome,
+    payout: bet.result.payout
+  });
+
   saveGameData(data);
   return bet;
+}
+
+// Bulk settle all pending bets with the same outcome
+export function bulkSettleBets(gameId, outcome) {
+  const data = getGameData(gameId);
+  ensureBets(data);
+
+  const pending = data.bets.filter(b => b.status === 'pending');
+  if (pending.length === 0) throw new Error('No pending bets to settle');
+
+  const settled = [];
+  for (const bet of pending) {
+    bet.status = outcome;
+    bet.settledAt = new Date().toISOString();
+    bet.result = {
+      payout: outcome === 'won' ? bet.potentialPayout : 0
+    };
+    settled.push(bet);
+  }
+
+  addAuditEntry(data, 'bulk_settle', {
+    outcome,
+    count: settled.length,
+    totalPayout: settled.reduce((s, b) => s + (b.result?.payout || 0), 0)
+  });
+
+  saveGameData(data);
+  return { settled: settled.length, outcome };
 }
 
 // Get bet statistics for admin dashboard
@@ -718,6 +811,67 @@ export function getBetStats(gameId) {
       netPosition: roundedProfit
     }
   };
+}
+
+// --- Audit Log ---
+
+function ensureAuditLog(data) {
+  if (!data.auditLog) {
+    data.auditLog = [];
+  }
+  return data;
+}
+
+function addAuditEntry(data, action, details = {}) {
+  ensureAuditLog(data);
+  data.auditLog.push({
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action,
+    details,
+    timestamp: new Date().toISOString()
+  });
+  // Keep only last 200 entries
+  if (data.auditLog.length > 200) {
+    data.auditLog = data.auditLog.slice(-200);
+  }
+}
+
+export function getAuditLog(gameId) {
+  const data = getGameData(gameId);
+  ensureAuditLog(data);
+  return data.auditLog;
+}
+
+// --- Admin PIN ---
+
+export function setAdminPin(gameId, pin) {
+  const data = getGameData(gameId);
+  if (!pin || pin.length < 4) {
+    throw new Error('PIN must be at least 4 characters');
+  }
+  data.adminPin = pin;
+  addAuditEntry(data, 'pin_changed', {});
+  saveGameData(data);
+  return { success: true };
+}
+
+export function verifyAdminPin(gameId, pin) {
+  const data = getGameData(gameId);
+  if (!data.adminPin) return true; // No PIN set, allow access
+  return data.adminPin === pin;
+}
+
+export function clearAdminPin(gameId) {
+  const data = getGameData(gameId);
+  data.adminPin = null;
+  addAuditEntry(data, 'pin_cleared', {});
+  saveGameData(data);
+  return { success: true };
+}
+
+export function hasAdminPin(gameId) {
+  const data = getGameData(gameId);
+  return !!data.adminPin;
 }
 
 // Export for backwards compatibility

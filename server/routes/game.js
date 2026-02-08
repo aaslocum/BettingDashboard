@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, unclaimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, getBetStats } from '../services/dataService.js';
+import { getGameData, claimSquare, unclaimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, cancelBet, bulkSettleBets, getBetStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -199,13 +199,41 @@ router.post('/bets/:betId/settle', (req, res) => {
   try {
     const { betId } = req.params;
     const { gameId, outcome } = req.body;
-    if (!['won', 'lost', 'push'].includes(outcome)) {
-      return res.status(400).json({ error: 'outcome must be won, lost, or push' });
+    if (!['won', 'lost', 'push', 'void'].includes(outcome)) {
+      return res.status(400).json({ error: 'outcome must be won, lost, push, or void' });
     }
     const bet = settleBet(gameId, betId, outcome);
     res.json({ bet });
   } catch (error) {
     console.error('Error settling bet:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// POST /api/game/bets/:betId/cancel - Cancel a pending bet
+router.post('/bets/:betId/cancel', (req, res) => {
+  try {
+    const { betId } = req.params;
+    const { gameId, playerId } = req.body;
+    const bet = cancelBet(gameId, betId, playerId);
+    res.json({ bet });
+  } catch (error) {
+    console.error('Error cancelling bet:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// POST /api/game/bets/bulk-settle - Settle all pending bets
+router.post('/bets/bulk-settle', (req, res) => {
+  try {
+    const { gameId, outcome } = req.body;
+    if (!['won', 'lost', 'push', 'void'].includes(outcome)) {
+      return res.status(400).json({ error: 'outcome must be won, lost, push, or void' });
+    }
+    const result = bulkSettleBets(gameId, outcome);
+    res.json(result);
+  } catch (error) {
+    console.error('Error bulk settling bets:', error);
     res.status(400).json({ error: error.message });
   }
 });

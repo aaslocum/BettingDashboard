@@ -185,6 +185,14 @@ function AdminPage() {
               await apiCall('quarter', { quarter });
               showMessage(`${getQuarterName(quarter)} winner recorded`);
             }}
+            onUndoQuarter={async (quarter) => {
+              try {
+                await apiCall('quarter/undo', { quarter });
+                showMessage(`${getQuarterName(quarter)} winner undone`);
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
           />
 
           {/* Betting Ledger */}
@@ -206,6 +214,12 @@ function AdminPage() {
               }
             }}
           />
+
+          {/* Admin PIN Control */}
+          <AdminPinControl gameId={currentGameId} showMessage={showMessage} />
+
+          {/* Audit Log */}
+          <AuditLogPanel gameId={currentGameId} />
 
           {/* Reset Game */}
           <ResetControl
@@ -635,7 +649,9 @@ function GridControl({ locked, squaresClaimed, onLock, onBulkAssign }) {
   );
 }
 
-function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
+function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter, onUndoQuarter }) {
+  const [confirmQuarter, setConfirmQuarter] = useState(null);
+
   if (!gridLocked) {
     return (
       <div className="card">
@@ -644,6 +660,15 @@ function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
       </div>
     );
   }
+
+  const handleMarkClick = (key) => {
+    if (confirmQuarter === key) {
+      onMarkQuarter(key);
+      setConfirmQuarter(null);
+    } else {
+      setConfirmQuarter(key);
+    }
+  };
 
   return (
     <div className="card">
@@ -656,12 +681,40 @@ function QuarterControl({ quarters, scores, gridLocked, onMarkQuarter }) {
           <div key={key} className="flex justify-between items-center">
             <span>{getQuarterName(key)} ({formatCurrency(quarter.prize)})</span>
             {quarter.completed ? (
-              <span className="text-green-400">
-                Winner: {quarter.winner?.player}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-green-400">
+                  Winner: {quarter.winner?.player}
+                </span>
+                <button
+                  onClick={() => {
+                    if (confirm(`Undo ${getQuarterName(key)} winner (${quarter.winner?.player})?`)) {
+                      onUndoQuarter(key);
+                    }
+                  }}
+                  className="text-[10px] text-red-400 hover:text-red-300 underline"
+                >
+                  Undo
+                </button>
+              </div>
+            ) : confirmQuarter === key ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-yellow-400">Confirm?</span>
+                <button
+                  onClick={() => handleMarkClick(key)}
+                  className="btn-success text-sm"
+                >
+                  Yes, Mark Winner
+                </button>
+                <button
+                  onClick={() => setConfirmQuarter(null)}
+                  className="btn-secondary text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
             ) : (
               <button
-                onClick={() => onMarkQuarter(key)}
+                onClick={() => handleMarkClick(key)}
                 className="btn-primary text-sm"
               >
                 Mark Winner
@@ -967,6 +1020,185 @@ function PlayersControl({ players, squares, onAddPlayer, onRemovePlayer }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminPinControl({ gameId, showMessage }) {
+  const [pin, setPin] = useState('');
+  const [hasPin, setHasPin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPinStatus = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (gameId) params.append('gameId', gameId);
+      const response = await fetch(`/api/admin/pin/status?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHasPin(data.hasPin);
+      }
+    } catch (err) { /* silent */ }
+    finally { setLoading(false); }
+  }, [gameId]);
+
+  useEffect(() => { fetchPinStatus(); }, [fetchPinStatus]);
+
+  const handleSetPin = async () => {
+    if (pin.length < 4) {
+      showMessage('PIN must be at least 4 characters', 'error');
+      return;
+    }
+    try {
+      const response = await fetch('/api/admin/pin/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, pin }),
+      });
+      if (response.ok) {
+        setHasPin(true);
+        setPin('');
+        showMessage('Admin PIN set');
+      }
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  };
+
+  const handleClearPin = async () => {
+    if (!confirm('Remove admin PIN protection?')) return;
+    try {
+      const response = await fetch('/api/admin/pin/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId }),
+      });
+      if (response.ok) {
+        setHasPin(false);
+        showMessage('Admin PIN removed');
+      }
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="card">
+      <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>
+        Admin PIN
+      </h2>
+      {hasPin ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-green-400 text-sm">PIN is set</span>
+            <button onClick={handleClearPin} className="text-red-400 text-xs underline hover:text-red-300">
+              Remove PIN
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Users must enter this PIN to access the admin page.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 mb-2">
+            Set a PIN to protect admin controls from accidental access.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              placeholder="Enter 4+ digit PIN"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              className="input-field flex-1 text-sm"
+            />
+            <button onClick={handleSetPin} className="btn-primary text-sm" disabled={pin.length < 4}>
+              Set PIN
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AuditLogPanel({ gameId }) {
+  const [log, setLog] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+
+  const fetchLog = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (gameId) params.append('gameId', gameId);
+      const response = await fetch(`/api/admin/audit-log?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLog(data.log || []);
+      }
+    } catch (err) { /* silent */ }
+  }, [gameId]);
+
+  useEffect(() => { fetchLog(); }, [fetchLog]);
+  useEffect(() => {
+    if (!expanded) return;
+    const interval = setInterval(fetchLog, 10000);
+    return () => clearInterval(interval);
+  }, [expanded, fetchLog]);
+
+  const actionLabels = {
+    quarter_marked: 'Quarter Winner Marked',
+    quarter_unmarked: 'Quarter Winner Undone',
+    bet_settled: 'Bet Settled',
+    bet_cancelled: 'Bet Cancelled',
+    bulk_settle: 'Bulk Settle',
+    pin_changed: 'PIN Changed',
+    pin_cleared: 'PIN Removed',
+  };
+
+  return (
+    <div className="card">
+      <button
+        onClick={() => { setExpanded(!expanded); if (!expanded) fetchLog(); }}
+        className="w-full flex justify-between items-center"
+      >
+        <h2 className="text-sm font-bold tracking-wider uppercase" style={{ color: 'var(--nbc-gold)' }}>
+          Audit Log
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">{log.length} entries</span>
+          <span className="text-gray-500 text-xs">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-1 max-h-[300px] overflow-y-auto">
+          {log.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-2">No audit entries yet</p>
+          ) : (
+            [...log].reverse().map((entry) => (
+              <div key={entry.id} className="rounded px-2.5 py-1.5 text-xs" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-300">
+                    {actionLabels[entry.action] || entry.action}
+                  </span>
+                  <span className="text-[10px] text-gray-600">
+                    {new Date(entry.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                {entry.details && Object.keys(entry.details).length > 0 && (
+                  <div className="text-[10px] text-gray-500 mt-0.5">
+                    {Object.entries(entry.details).map(([k, v]) => (
+                      <span key={k} className="mr-2">{k}: {String(v)}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>

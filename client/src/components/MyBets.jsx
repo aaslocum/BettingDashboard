@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { formatOdds, getOddsColorClass, formatCurrency } from '../utils/helpers';
 
-function MyBets({ bets }) {
+function MyBets({ bets, gameId, playerId, onBetCancelled }) {
   const [expanded, setExpanded] = useState(false);
+  const [cancelling, setCancelling] = useState(null);
 
   if (!bets || bets.length === 0) return null;
 
@@ -12,6 +13,28 @@ function MyBets({ bets }) {
   const totalWon = settled.filter(b => b.status === 'won').reduce((s, b) => s + b.potentialPayout, 0);
   const totalLost = settled.filter(b => b.status === 'lost').reduce((s, b) => s + b.wager, 0);
   const net = totalWon - totalLost;
+
+  const handleCancel = async (betId, e) => {
+    e.stopPropagation();
+    if (!confirm('Cancel this bet?')) return;
+    setCancelling(betId);
+    try {
+      const response = await fetch(`/api/game/bets/${betId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, playerId }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error);
+      }
+      if (onBetCancelled) onBetCancelled();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <section className="card">
@@ -40,7 +63,7 @@ function MyBets({ bets }) {
         <div className="mt-3 space-y-1.5">
           {/* Pending bets first */}
           {pending.map(bet => (
-            <BetRow key={bet.id} bet={bet} />
+            <BetRow key={bet.id} bet={bet} onCancel={handleCancel} cancelling={cancelling} />
           ))}
 
           {/* Settled bets */}
@@ -67,7 +90,7 @@ function MyBets({ bets }) {
   );
 }
 
-function BetRow({ bet }) {
+function BetRow({ bet, onCancel, cancelling }) {
   const [showLegs, setShowLegs] = useState(false);
   const isParlay = bet.type === 'parlay';
   const displayOdds = isParlay ? bet.combinedOdds : bet.selection?.odds;
@@ -76,7 +99,9 @@ function BetRow({ bet }) {
     pending: 'text-yellow-400 bg-yellow-400/10',
     won: 'text-green-400 bg-green-400/10',
     lost: 'text-red-400 bg-red-400/10',
-    push: 'text-gray-400 bg-gray-400/10'
+    push: 'text-gray-400 bg-gray-400/10',
+    cancelled: 'text-gray-500 bg-gray-500/10',
+    void: 'text-gray-500 bg-gray-500/10'
   };
 
   return (
@@ -110,9 +135,20 @@ function BetRow({ bet }) {
             )}
           </div>
         </div>
-        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${statusColors[bet.status]}`}>
-          {bet.status}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {bet.status === 'pending' && onCancel && (
+            <button
+              onClick={(e) => onCancel(bet.id, e)}
+              disabled={cancelling === bet.id}
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded text-red-400 bg-red-400/10 hover:bg-red-400/20 transition-colors disabled:opacity-50"
+            >
+              {cancelling === bet.id ? '...' : 'Cancel'}
+            </button>
+          )}
+          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${statusColors[bet.status] || statusColors.pending}`}>
+            {bet.status}
+          </span>
+        </div>
       </div>
 
       {/* Expanded parlay legs */}

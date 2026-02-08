@@ -6,6 +6,7 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
   const [wager, setWager] = useState(Math.min(1, maxWager));
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
 
   const payout = useMemo(() => {
     const val = calculatePayout(bet.odds, wager);
@@ -16,6 +17,10 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
 
   const handlePlace = async () => {
     if (!isValid) return;
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
     setPlacing(true);
     setError('');
     try {
@@ -23,6 +28,7 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
     } catch (err) {
       setError(err.message);
       setPlacing(false);
+      setConfirming(false);
     }
   };
 
@@ -30,7 +36,7 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div className="card w-full max-w-sm">
         <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>
-          Place Bet
+          {confirming ? 'Confirm Bet' : 'Place Bet'}
         </h2>
 
         {/* Bet Details */}
@@ -44,52 +50,54 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
           </div>
         </div>
 
-        {/* Wager Input */}
-        <div className="mb-4">
-          <label className="text-xs text-gray-400 block mb-1">
-            Wager Amount (max {formatCurrency(maxWager)} for ${maxPayout} payout)
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-lg">$</span>
-            <input
-              type="number"
-              min="0.25"
-              max={maxWager}
-              step="0.25"
-              value={wager}
-              onChange={(e) => setWager(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="input-field flex-1 text-lg font-bold"
-            />
-          </div>
+        {/* Wager Input - hidden during confirmation */}
+        {!confirming && (
+          <div className="mb-4">
+            <label className="text-xs text-gray-400 block mb-1">
+              Wager Amount (max {formatCurrency(maxWager)} for ${maxPayout} payout)
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-lg">$</span>
+              <input
+                type="number"
+                min="0.25"
+                max={maxWager}
+                step="0.25"
+                value={wager}
+                onChange={(e) => setWager(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="input-field flex-1 text-lg font-bold"
+              />
+            </div>
 
-          {/* Quick Amount Buttons */}
-          <div className="flex gap-2 mt-2">
-            {[0.50, 1, 2, 5].filter(v => v <= maxWager).map(amount => (
+            {/* Quick Amount Buttons */}
+            <div className="flex gap-2 mt-2">
+              {[0.50, 1, 2, 5].filter(v => v <= maxWager).map(amount => (
+                <button
+                  key={amount}
+                  onClick={() => setWager(amount)}
+                  className={`flex-1 py-1 rounded text-xs font-semibold transition-colors ${
+                    wager === amount ? 'nbc-tab-active' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                  style={wager !== amount ? { background: 'rgba(0,0,0,0.25)' } : {}}
+                >
+                  ${amount}
+                </button>
+              ))}
               <button
-                key={amount}
-                onClick={() => setWager(amount)}
+                onClick={() => setWager(maxWager)}
                 className={`flex-1 py-1 rounded text-xs font-semibold transition-colors ${
-                  wager === amount ? 'nbc-tab-active' : 'text-gray-500 hover:text-gray-300'
+                  wager === maxWager ? 'nbc-tab-active' : 'text-gray-500 hover:text-gray-300'
                 }`}
-                style={wager !== amount ? { background: 'rgba(0,0,0,0.25)' } : {}}
+                style={wager !== maxWager ? { background: 'rgba(0,0,0,0.25)' } : {}}
               >
-                ${amount}
+                Max
               </button>
-            ))}
-            <button
-              onClick={() => setWager(maxWager)}
-              className={`flex-1 py-1 rounded text-xs font-semibold transition-colors ${
-                wager === maxWager ? 'nbc-tab-active' : 'text-gray-500 hover:text-gray-300'
-              }`}
-              style={wager !== maxWager ? { background: 'rgba(0,0,0,0.25)' } : {}}
-            >
-              Max
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Payout Preview */}
-        <div className="rounded p-3 mb-4" style={{ background: 'rgba(0,0,0,0.35)' }}>
+        <div className="rounded p-3 mb-4" style={{ background: confirming ? 'rgba(22,101,52,0.2)' : 'rgba(0,0,0,0.35)', border: confirming ? '1px solid rgba(34,197,94,0.3)' : 'none' }}>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-400">Wager</span>
             <span className="text-white font-semibold">{formatCurrency(wager)}</span>
@@ -106,6 +114,13 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
           </div>
         </div>
 
+        {/* Confirmation Message */}
+        {confirming && (
+          <div className="text-center text-xs text-yellow-400 mb-3">
+            Are you sure you want to place this bet?
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div className="text-red-400 text-xs text-center mb-3">{error}</div>
@@ -116,16 +131,16 @@ function BetSlipModal({ bet, maxPayout = 20, onPlace, onClose }) {
           <button
             onClick={handlePlace}
             disabled={!isValid || placing}
-            className="btn-success flex-1 text-sm font-bold"
+            className={`flex-1 text-sm font-bold ${confirming ? 'btn-success' : 'btn-primary'}`}
           >
-            {placing ? 'Placing...' : `Bet ${formatCurrency(wager)}`}
+            {placing ? 'Placing...' : confirming ? `Confirm ${formatCurrency(wager)}` : `Bet ${formatCurrency(wager)}`}
           </button>
           <button
-            onClick={onClose}
+            onClick={confirming ? () => setConfirming(false) : onClose}
             className="btn-secondary text-sm"
             style={{ padding: '8px 16px' }}
           >
-            Cancel
+            {confirming ? 'Back' : 'Cancel'}
           </button>
         </div>
       </div>
