@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGameData, claimSquare, unclaimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, cancelBet, bulkSettleBets, getBetStats } from '../services/dataService.js';
+import { getGameData, claimSquare, unclaimSquare, bulkClaimSquares, findWinnerForScores, getPlayerStats, addPlayer, updatePlayer, removePlayer, getPlayers, placeBet, getBets, settleBet, cancelBet, bulkSettleBets, getBetStats } from '../services/dataService.js';
 
 const router = Router();
 
@@ -130,6 +130,24 @@ router.post('/players', (req, res) => {
     res.status(201).json({ player });
   } catch (error) {
     console.error('Error adding player:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// PUT /api/game/players/:playerId - Update a player's name
+router.put('/players/:playerId', (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { firstName, lastName, gameId } = req.body;
+
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'firstName and lastName are required' });
+    }
+
+    const player = updatePlayer(playerId, firstName, lastName, gameId);
+    res.json({ player });
+  } catch (error) {
+    console.error('Error updating player:', error);
     res.status(400).json({ error: error.message });
   }
 });

@@ -78,6 +78,23 @@ export function useGameData(refreshInterval = 5000, gameId = null) {
     return data.player;
   };
 
+  const updatePlayer = async (playerId, firstName, lastName) => {
+    const response = await fetch(`/api/game/players/${playerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, gameId })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error);
+    }
+
+    const data = await response.json();
+    await fetchData();
+    return data.player;
+  };
+
   const removePlayer = async (playerId) => {
     const url = gameId
       ? `/api/game/players/${playerId}?gameId=${gameId}`
@@ -109,7 +126,7 @@ export function useGameData(refreshInterval = 5000, gameId = null) {
     return (await response.json()).bet;
   };
 
-  return { gameData, loading, error, refetch: fetchData, claimSquare, unclaimSquare, addPlayer, removePlayer, placeBet };
+  return { gameData, loading, error, refetch: fetchData, claimSquare, unclaimSquare, addPlayer, updatePlayer, removePlayer, placeBet };
 }
 
 export function useOddsData(refreshInterval = 30000) {

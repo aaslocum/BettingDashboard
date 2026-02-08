@@ -489,6 +489,43 @@ export function addPlayer(firstName, lastName, gameId) {
   return player;
 }
 
+// Update a player's name (and re-derive initials, updating squares)
+export function updatePlayer(playerId, firstName, lastName, gameId) {
+  const data = getGameData(gameId);
+  ensurePlayers(data);
+
+  const player = data.players.find(p => p.id === playerId);
+  if (!player) {
+    throw new Error('Player not found');
+  }
+
+  const cleanFirst = (firstName || '').trim();
+  const cleanLast = (lastName || '').trim();
+
+  if (cleanFirst.length === 0 || cleanLast.length === 0) {
+    throw new Error('First name and last name cannot be empty');
+  }
+
+  const oldInitials = player.initials;
+
+  // Derive new initials, excluding this player's current initials from conflict check
+  const existingInitials = data.players.filter(p => p.id !== playerId).map(p => p.initials);
+  const newInitials = deriveInitials(cleanFirst, cleanLast, existingInitials);
+
+  // Update player record
+  player.firstName = cleanFirst;
+  player.lastName = cleanLast;
+  player.initials = newInitials;
+
+  // Update any squares that had the old initials
+  if (oldInitials !== newInitials && data.grid?.squares) {
+    data.grid.squares = data.grid.squares.map(s => s === oldInitials ? newInitials : s);
+  }
+
+  saveGameData(data);
+  return player;
+}
+
 // Remove a player from a game (does not clear their squares)
 export function removePlayer(playerId, gameId) {
   const data = getGameData(gameId);

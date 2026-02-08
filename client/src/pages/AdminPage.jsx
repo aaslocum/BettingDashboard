@@ -10,7 +10,7 @@ import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
   const { currentGameId, currentGame, deleteGame, updateGame, games } = useGameContext();
-  const { gameData, loading, error, refetch, addPlayer, removePlayer } = useGameData(5000, currentGameId);
+  const { gameData, loading, error, refetch, addPlayer, updatePlayer, removePlayer } = useGameData(5000, currentGameId);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [syncStatus, setSyncStatus] = useState(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
@@ -121,6 +121,14 @@ function AdminPage() {
               try {
                 await addPlayer(firstName, lastName);
                 showMessage(`Added ${firstName} ${lastName}`);
+              } catch (err) {
+                showMessage(err.message, 'error');
+              }
+            }}
+            onUpdatePlayer={async (playerId, firstName, lastName) => {
+              try {
+                await updatePlayer(playerId, firstName, lastName);
+                showMessage(`Updated ${firstName} ${lastName}`);
               } catch (err) {
                 showMessage(err.message, 'error');
               }
@@ -938,10 +946,14 @@ function DemoScoreControl({ teams, scores, onUpdateScores, gridLocked }) {
   );
 }
 
-function PlayersControl({ players, squares, onAddPlayer, onRemovePlayer }) {
+function PlayersControl({ players, squares, onAddPlayer, onUpdatePlayer, onRemovePlayer }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editFirst, setEditFirst] = useState('');
+  const [editLast, setEditLast] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -953,6 +965,29 @@ function PlayersControl({ players, squares, onAddPlayer, onRemovePlayer }) {
       setLastName('');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const startEdit = (player) => {
+    setEditingId(player.id);
+    setEditFirst(player.firstName);
+    setEditLast(player.lastName);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditFirst('');
+    setEditLast('');
+  };
+
+  const handleSaveEdit = async (playerId) => {
+    if (!editFirst.trim() || !editLast.trim()) return;
+    setSaving(true);
+    try {
+      await onUpdatePlayer(playerId, editFirst.trim(), editLast.trim());
+      setEditingId(null);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1004,28 +1039,85 @@ function PlayersControl({ players, squares, onAddPlayer, onRemovePlayer }) {
           {players.map(player => (
             <div
               key={player.id}
-              className="flex items-center justify-between py-1.5 px-2 rounded text-sm"
+              className="py-1.5 px-2 rounded text-sm"
               style={{ background: 'rgba(0,0,0,0.15)' }}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-bold text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
-                  {player.initials}
-                </span>
-                <span className="truncate text-gray-300">
-                  {player.firstName} {player.lastName}
-                </span>
-                {squareCounts[player.initials] > 0 && (
-                  <span className="text-xs text-gray-500">
-                    ({squareCounts[player.initials]} sq)
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => onRemovePlayer(player.id, `${player.firstName} ${player.lastName}`)}
-                className="text-red-400 hover:text-red-300 text-xs ml-2 flex-shrink-0"
-              >
-                Remove
-              </button>
+              {editingId === player.id ? (
+                <div className="space-y-1.5">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={editFirst}
+                      onChange={(e) => setEditFirst(e.target.value)}
+                      className="input-field flex-1 text-sm !py-1"
+                      placeholder="First"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') cancelEdit();
+                        if (e.key === 'Enter') handleSaveEdit(player.id);
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={editLast}
+                      onChange={(e) => setEditLast(e.target.value)}
+                      className="input-field flex-1 text-sm !py-1"
+                      placeholder="Last"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') cancelEdit();
+                        if (e.key === 'Enter') handleSaveEdit(player.id);
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-1.5 justify-end">
+                    <button
+                      onClick={() => handleSaveEdit(player.id)}
+                      disabled={saving || !editFirst.trim() || !editLast.trim()}
+                      className="btn-success text-[10px] disabled:opacity-50"
+                      style={{ padding: '2px 8px' }}
+                    >
+                      {saving ? '...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="btn-secondary text-[10px]"
+                      style={{ padding: '2px 8px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
+                      {player.initials}
+                    </span>
+                    <span className="truncate text-gray-300">
+                      {player.firstName} {player.lastName}
+                    </span>
+                    {squareCounts[player.initials] > 0 && (
+                      <span className="text-xs text-gray-500">
+                        ({squareCounts[player.initials]} sq)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                    <button
+                      onClick={() => startEdit(player)}
+                      className="text-blue-400 hover:text-blue-300 text-xs"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onRemovePlayer(player.id, `${player.firstName} ${player.lastName}`)}
+                      className="text-red-400 hover:text-red-300 text-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
