@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps, fetchHistoricalOdds, fetchHistoricalPlayerProps } from '../services/oddsService.js';
-import { getOddsHistory, getAvailableKeys, needsBackfill, runBackfill, markBackfilled } from '../services/oddsHistoryService.js';
+import { fetchSuperBowlOdds, getMockOdds, fetchPlayerProps, getMockPlayerProps } from '../services/oddsService.js';
+import { getOddsHistory, getAvailableKeys } from '../services/oddsHistoryService.js';
 import { getTeamStats, getPlayerGameStats } from '../services/statsService.js';
 import { getGameData, updateTeams } from '../services/dataService.js';
 import { getDefaultGameId } from '../services/gamesService.js';
@@ -81,41 +81,11 @@ router.get('/props', async (req, res) => {
 });
 
 // GET /api/odds/history - Get historical odds for a specific line
-router.get('/history', async (req, res) => {
+// Data is populated by admin import + live polling. No auto-backfill.
+router.get('/history', (req, res) => {
   const { eventId, key } = req.query;
   if (!eventId || !key) {
     return res.status(400).json({ error: 'eventId and key are required' });
-  }
-
-  const apiKey = process.env.ODDS_API_KEY;
-
-  // Determine if this is a player prop key (has 3 segments: market__player__name)
-  // vs a game odds key (has 2 segments: market__outcome)
-  const isPropsKey = key.split('__').length >= 3;
-
-  // Use separate backfill tracking for game odds vs props
-  const backfillKey = isPropsKey ? `${eventId}__props` : `${eventId}__game`;
-
-  if (apiKey && needsBackfill(backfillKey)) {
-    try {
-      if (isPropsKey) {
-        console.log(`Backfilling historical player props for event ${eventId}...`);
-        const snapshots = await fetchHistoricalPlayerProps(apiKey, eventId);
-        runBackfill(eventId, snapshots);
-        markBackfilled(backfillKey);
-        console.log(`Player props backfill complete for event ${eventId}`);
-      } else {
-        console.log(`Backfilling historical game odds for event ${eventId}...`);
-        const snapshots = await fetchHistoricalOdds(apiKey);
-        runBackfill(eventId, snapshots);
-        markBackfilled(backfillKey);
-        console.log(`Game odds backfill complete for event ${eventId}`);
-      }
-    } catch (err) {
-      console.warn('Historical backfill failed (will use available data):', err.message);
-      // Mark as backfilled anyway to avoid retrying on every request
-      markBackfilled(backfillKey);
-    }
   }
 
   const history = getOddsHistory(eventId, key);

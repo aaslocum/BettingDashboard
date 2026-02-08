@@ -6,6 +6,7 @@ import PlayerStats from '../components/PlayerStats';
 import BulkAssignModal from '../components/BulkAssignModal';
 import GameSelector from '../components/GameSelector';
 import BetsAdmin from '../components/BetsAdmin';
+import OddsImportPanel from '../components/OddsImportPanel';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
 function AdminPage() {
@@ -187,6 +188,9 @@ function AdminPage() {
             teams={gameData.teams}
             scores={gameData.scores}
           />
+
+          {/* Historical Odds Import */}
+          <OddsImportPanel />
 
           {/* Quarter Controls */}
           <QuarterControl
