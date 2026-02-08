@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameData, useOddsData, usePlayerProps } from '../hooks/useGameData';
 import { useGameContext } from '../context/GameContext';
+import { QRCodeSVG } from 'qrcode.react';
 import SquaresGrid from '../components/SquaresGrid';
 import OddsDisplay from '../components/OddsDisplay';
 import PlayerPropsDisplay from '../components/PlayerPropsDisplay';
@@ -193,7 +194,7 @@ function DisplayPage() {
             <div className="p-1.5 text-center">
               <div className="text-[8px] text-gray-500 uppercase tracking-wider mb-0.5">Join the Game</div>
               <div className="inline-block p-1.5 rounded" style={{ background: 'white' }}>
-                <QRCode url={`${window.location.origin}/`} size={64} />
+                <QRCodeSVG value={`${window.location.origin}/`} size={64} />
               </div>
               <div className="text-[9px] text-gray-500 mt-0.5">{window.location.host}</div>
             </div>
@@ -248,76 +249,6 @@ function DisplayPage() {
   );
 }
 
-// Simple text-based QR code component (no external dependency needed)
-function QRCode({ url, size = 80 }) {
-  // Use a simple visual representation - just the URL text in a scannable box
-  // For a real QR code you'd use a library, but this avoids adding dependencies
-  return (
-    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#000', fontWeight: 'bold', wordBreak: 'break-all', textAlign: 'center', lineHeight: 1.2 }}>
-      <svg viewBox="0 0 100 100" width={size} height={size}>
-        {/* Simplified QR-like pattern */}
-        <rect x="0" y="0" width="100" height="100" fill="white"/>
-        {/* Corner squares */}
-        <rect x="5" y="5" width="25" height="25" fill="black"/>
-        <rect x="8" y="8" width="19" height="19" fill="white"/>
-        <rect x="11" y="11" width="13" height="13" fill="black"/>
-        <rect x="70" y="5" width="25" height="25" fill="black"/>
-        <rect x="73" y="8" width="19" height="19" fill="white"/>
-        <rect x="76" y="11" width="13" height="13" fill="black"/>
-        <rect x="5" y="70" width="25" height="25" fill="black"/>
-        <rect x="8" y="73" width="19" height="19" fill="white"/>
-        <rect x="11" y="76" width="13" height="13" fill="black"/>
-        {/* Data pattern */}
-        <rect x="35" y="5" width="5" height="5" fill="black"/>
-        <rect x="45" y="5" width="5" height="5" fill="black"/>
-        <rect x="55" y="5" width="5" height="5" fill="black"/>
-        <rect x="35" y="15" width="5" height="5" fill="black"/>
-        <rect x="50" y="15" width="5" height="5" fill="black"/>
-        <rect x="35" y="25" width="5" height="5" fill="black"/>
-        <rect x="45" y="25" width="5" height="5" fill="black"/>
-        <rect x="60" y="25" width="5" height="5" fill="black"/>
-        <rect x="5" y="35" width="5" height="5" fill="black"/>
-        <rect x="15" y="35" width="5" height="5" fill="black"/>
-        <rect x="25" y="35" width="5" height="5" fill="black"/>
-        <rect x="35" y="35" width="5" height="5" fill="black"/>
-        <rect x="45" y="35" width="5" height="5" fill="black"/>
-        <rect x="55" y="35" width="5" height="5" fill="black"/>
-        <rect x="65" y="35" width="5" height="5" fill="black"/>
-        <rect x="75" y="35" width="5" height="5" fill="black"/>
-        <rect x="85" y="35" width="5" height="5" fill="black"/>
-        <rect x="5" y="45" width="5" height="5" fill="black"/>
-        <rect x="25" y="45" width="5" height="5" fill="black"/>
-        <rect x="40" y="45" width="5" height="5" fill="black"/>
-        <rect x="55" y="45" width="5" height="5" fill="black"/>
-        <rect x="75" y="45" width="5" height="5" fill="black"/>
-        <rect x="5" y="55" width="5" height="5" fill="black"/>
-        <rect x="15" y="55" width="5" height="5" fill="black"/>
-        <rect x="25" y="55" width="5" height="5" fill="black"/>
-        <rect x="35" y="55" width="5" height="5" fill="black"/>
-        <rect x="50" y="55" width="5" height="5" fill="black"/>
-        <rect x="65" y="55" width="5" height="5" fill="black"/>
-        <rect x="80" y="55" width="5" height="5" fill="black"/>
-        <rect x="90" y="55" width="5" height="5" fill="black"/>
-        <rect x="35" y="65" width="5" height="5" fill="black"/>
-        <rect x="50" y="65" width="5" height="5" fill="black"/>
-        <rect x="60" y="65" width="5" height="5" fill="black"/>
-        <rect x="75" y="65" width="5" height="5" fill="black"/>
-        <rect x="85" y="65" width="5" height="5" fill="black"/>
-        <rect x="35" y="75" width="5" height="5" fill="black"/>
-        <rect x="45" y="75" width="5" height="5" fill="black"/>
-        <rect x="55" y="75" width="5" height="5" fill="black"/>
-        <rect x="70" y="75" width="5" height="5" fill="black"/>
-        <rect x="80" y="75" width="5" height="5" fill="black"/>
-        <rect x="35" y="85" width="5" height="5" fill="black"/>
-        <rect x="50" y="85" width="5" height="5" fill="black"/>
-        <rect x="65" y="85" width="5" height="5" fill="black"/>
-        <rect x="75" y="85" width="5" height="5" fill="black"/>
-        <rect x="90" y="85" width="5" height="5" fill="black"/>
-        <rect x="90" y="90" width="5" height="5" fill="black"/>
-      </svg>
-    </div>
-  );
-}
 
 function RotatingPanel({ activePanel, propsData, gameData }) {
   const panelType = PANEL_TYPES[activePanel];

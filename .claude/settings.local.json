@@ -24,7 +24,8 @@
       "Bash(npx vite build:*)",
       "Bash(python:*)",
       "Bash(taskkill:*)",
-      "WebFetch(domain:site.api.espn.com)"
+      "WebFetch(domain:site.api.espn.com)",
+      "Bash(npm ls:*)"
     ]
   }
 }
