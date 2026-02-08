@@ -10,6 +10,7 @@ import PlayerGameStats from '../components/PlayerGameStats';
 import Scoreboard from '../components/Scoreboard';
 import WinnersPanel from '../components/WinnersPanel';
 import PlayerStats from '../components/PlayerStats';
+import OddsHistoryModal from '../components/OddsHistoryModal';
 import { formatCurrency, getQuarterName } from '../utils/helpers';
 
 const PANEL_TYPES = ['props', 'teamStats', 'playerStats'];
@@ -59,6 +60,7 @@ function DisplayPage() {
   const [panelDuration, setPanelDuration] = useState(10000);
   const [showSettings, setShowSettings] = useState(false);
   const [winnerAnimation, setWinnerAnimation] = useState(null);
+  const [chartInfo, setChartInfo] = useState(null);
   const prevQuartersRef = useRef(null);
 
   // Auto-rotate panels
@@ -235,7 +237,7 @@ function DisplayPage() {
           </div>
 
           {/* Betting Odds - bottom of right column */}
-          <OddsDisplay oddsData={oddsData} displayMode />
+          <OddsDisplay oddsData={oddsData} displayMode onChartClick={(info) => setChartInfo(info)} />
         </div>
       </div>
 
@@ -245,6 +247,17 @@ function DisplayPage() {
           <CombinedTicker oddsData={oddsData} propsData={propsData} />
         </div>
       </div>
+
+      {/* Odds History Chart Modal */}
+      {chartInfo && (
+        <OddsHistoryModal
+          eventId={chartInfo.eventId}
+          oddsKey={chartInfo.key}
+          label={chartInfo.label}
+          currentOdds={chartInfo.currentOdds}
+          onClose={() => setChartInfo(null)}
+        />
+      )}
     </div>
   );
 }

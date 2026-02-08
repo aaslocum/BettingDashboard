@@ -23,7 +23,7 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
   const bookmakers = game.bookmakers || [];
 
   if (displayMode) {
-    return <OddsDisplayTV game={game} bookmakers={bookmakers} />;
+    return <OddsDisplayTV game={game} bookmakers={bookmakers} onChartClick={onChartClick} />;
   }
 
   // Get DraftKings data (should be the only bookmaker now)
@@ -201,7 +201,7 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
 }
 
 // TV-optimized display with NBC styling
-function OddsDisplayTV({ game, bookmakers }) {
+function OddsDisplayTV({ game, bookmakers, onChartClick }) {
   const bookmaker = bookmakers[0];
   const h2h = bookmaker?.markets?.find(m => m.key === 'h2h');
   const spreads = bookmaker?.markets?.find(m => m.key === 'spreads');
@@ -223,9 +223,25 @@ function OddsDisplayTV({ game, bookmakers }) {
             {h2h.outcomes?.map((o) => (
               <div key={o.name} className="flex justify-between items-center py-1">
                 <span className="text-sm text-gray-300">{o.name}</span>
-                <span className={`font-bold ${getOddsColorClass(o.price)}`}>
-                  {formatOdds(o.price)}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold ${getOddsColorClass(o.price)}`}>
+                    {formatOdds(o.price)}
+                  </span>
+                  {onChartClick && (
+                    <button
+                      onClick={() => onChartClick({
+                        eventId: game.id,
+                        key: `h2h__${o.name}`,
+                        label: `${o.name} Moneyline`,
+                        currentOdds: o.price
+                      })}
+                      className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
+                      title="View odds history"
+                    >
+                      <ChartIcon size={11} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -238,9 +254,25 @@ function OddsDisplayTV({ game, bookmakers }) {
             {spreads.outcomes?.map((o) => (
               <div key={o.name} className="flex justify-between items-center py-1">
                 <span className="text-sm text-gray-300">{o.name}</span>
-                <span className="font-bold text-nbc-gold">
-                  {o.point > 0 ? '+' : ''}{o.point}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-nbc-gold">
+                    {o.point > 0 ? '+' : ''}{o.point}
+                  </span>
+                  {onChartClick && (
+                    <button
+                      onClick={() => onChartClick({
+                        eventId: game.id,
+                        key: `spreads__${o.name}`,
+                        label: `${o.name} ${o.point > 0 ? '+' : ''}${o.point}`,
+                        currentOdds: o.price
+                      })}
+                      className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
+                      title="View odds history"
+                    >
+                      <ChartIcon size={11} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -253,7 +285,23 @@ function OddsDisplayTV({ game, bookmakers }) {
             {totals.outcomes?.map((o) => (
               <div key={o.name} className="flex justify-between items-center py-1">
                 <span className="text-sm text-gray-300">{o.name}</span>
-                <span className="font-bold text-blue-400">{o.point}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-blue-400">{o.point}</span>
+                  {onChartClick && (
+                    <button
+                      onClick={() => onChartClick({
+                        eventId: game.id,
+                        key: `totals__${o.name}`,
+                        label: `${o.name} ${o.point} Total Points`,
+                        currentOdds: o.price
+                      })}
+                      className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
+                      title="View odds history"
+                    >
+                      <ChartIcon size={11} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
