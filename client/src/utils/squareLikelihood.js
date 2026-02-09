@@ -52,12 +52,28 @@ export function getPossibleNextDigits(currentDigit) {
  * Calculate likelihood scores for all 100 squares
  * @param {Object} scores - Current scores {home, away}
  * @param {Object} gameContext - Game context for adjustments
+ * @param {Array} homeNumbers - Randomized home number array from grid (index = column, value = digit)
+ * @param {Array} awayNumbers - Randomized away number array from grid (index = row, value = digit)
  * @returns {Map} Map of squareIndex -> {likelihood, scenarios}
  */
-export function calculateSquareLikelihoods(scores, gameContext = {}) {
+export function calculateSquareLikelihoods(scores, gameContext = {}, homeNumbers = null, awayNumbers = null) {
   const { home: homeScore = 0, away: awayScore = 0 } = scores;
   const homeDigit = homeScore % 10;
   const awayDigit = awayScore % 10;
+
+  // Map a (homeDigit, awayDigit) pair to the correct grid square index.
+  // The grid is randomized: homeNumbers[col] = digit, awayNumbers[row] = digit.
+  // We need to find which col/row holds each digit.
+  const digitToIndex = (hDigit, aDigit) => {
+    if (homeNumbers && awayNumbers) {
+      const col = homeNumbers.indexOf(hDigit);
+      const row = awayNumbers.indexOf(aDigit);
+      if (col === -1 || row === -1) return -1;
+      return row * 10 + col;
+    }
+    // Fallback if number arrays not provided (unlocked grid)
+    return aDigit * 10 + hDigit;
+  };
 
   // Get multipliers from game context
   const multipliers = getContextMultipliers(gameContext);
@@ -70,17 +86,19 @@ export function calculateSquareLikelihoods(scores, gameContext = {}) {
   }
 
   // Calculate current winning square
-  const currentWinnerIndex = awayDigit * 10 + homeDigit;
-  likelihoodMap.get(currentWinnerIndex).likelihood = 100;
-  likelihoodMap.get(currentWinnerIndex).isCurrentWinner = true;
-  likelihoodMap.get(currentWinnerIndex).scenarios.push({ label: 'Current Winner', likelihood: 100 });
+  const currentWinnerIndex = digitToIndex(homeDigit, awayDigit);
+  if (currentWinnerIndex >= 0) {
+    likelihoodMap.get(currentWinnerIndex).likelihood = 100;
+    likelihoodMap.get(currentWinnerIndex).isCurrentWinner = true;
+    likelihoodMap.get(currentWinnerIndex).scenarios.push({ label: 'Current Winner', likelihood: 100 });
+  }
 
   // Calculate single-team scoring scenarios
   // Home team scores
   const homePossibilities = getPossibleNextDigits(homeDigit);
   homePossibilities.forEach(poss => {
-    const squareIndex = awayDigit * 10 + poss.newDigit;
-    if (squareIndex !== currentWinnerIndex) {
+    const squareIndex = digitToIndex(poss.newDigit, awayDigit);
+    if (squareIndex >= 0 && squareIndex !== currentWinnerIndex) {
       const adjustedLikelihood = adjustLikelihood(poss.likelihood, poss.type, multipliers, 'home');
       const existing = likelihoodMap.get(squareIndex);
       existing.likelihood = Math.max(existing.likelihood, adjustedLikelihood);
@@ -96,8 +114,8 @@ export function calculateSquareLikelihoods(scores, gameContext = {}) {
   // Away team scores
   const awayPossibilities = getPossibleNextDigits(awayDigit);
   awayPossibilities.forEach(poss => {
-    const squareIndex = poss.newDigit * 10 + homeDigit;
-    if (squareIndex !== currentWinnerIndex) {
+    const squareIndex = digitToIndex(homeDigit, poss.newDigit);
+    if (squareIndex >= 0 && squareIndex !== currentWinnerIndex) {
       const adjustedLikelihood = adjustLikelihood(poss.likelihood, poss.type, multipliers, 'away');
       const existing = likelihoodMap.get(squareIndex);
       existing.likelihood = Math.max(existing.likelihood, adjustedLikelihood);
@@ -116,9 +134,9 @@ export function calculateSquareLikelihoods(scores, gameContext = {}) {
       awayPossibilities.forEach(awayPoss => {
         const newHomeDigit = homePoss.newDigit;
         const newAwayDigit = awayPoss.newDigit;
-        const squareIndex = newAwayDigit * 10 + newHomeDigit;
+        const squareIndex = digitToIndex(newHomeDigit, newAwayDigit);
 
-        if (squareIndex !== currentWinnerIndex) {
+        if (squareIndex >= 0 && squareIndex !== currentWinnerIndex) {
           // Combined likelihood, reduced by 50% for being a two-score scenario
           const combinedBase = Math.min(homePoss.likelihood, awayPoss.likelihood) * 0.5;
           const adjustedLikelihood = Math.round(combinedBase * multipliers.overall);

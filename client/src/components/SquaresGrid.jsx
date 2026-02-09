@@ -28,17 +28,8 @@ function SquaresGrid({
       ...gameContext,
       homeScore: scores.home,
       awayScore: scores.away,
-    });
-  }, [scores, locked, showLikelihood, gameContext]);
-
-  // Get the actual grid coordinates from number arrays
-  const getGridCoordinates = (homeDigit, awayDigit) => {
-    if (!homeNumbers || !awayNumbers) return null;
-    const col = homeNumbers.indexOf(homeDigit);
-    const row = awayNumbers.indexOf(awayDigit);
-    if (col === -1 || row === -1) return null;
-    return row * 10 + col;
-  };
+    }, homeNumbers, awayNumbers);
+  }, [scores, locked, showLikelihood, gameContext, homeNumbers, awayNumbers]);
 
   const getSquareClass = (index) => {
     const baseClass = displayMode ? 'square text-base p-1' : 'square text-[9px] sm:text-xs p-0 sm:p-0.5';
