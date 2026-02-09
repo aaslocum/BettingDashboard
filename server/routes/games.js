@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import {
   getGamesIndex,
   getGame,
@@ -7,6 +10,21 @@ import {
   setDefaultGame,
   updateGameSettings
 } from '../services/gamesService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SETTLEMENTS_FILE = join(__dirname, '../../data/settlements.json');
+
+function readSettlements() {
+  if (!existsSync(SETTLEMENTS_FILE)) return {};
+  try {
+    return JSON.parse(readFileSync(SETTLEMENTS_FILE, 'utf-8'));
+  } catch { return {}; }
+}
+
+function writeSettlements(data) {
+  writeFileSync(SETTLEMENTS_FILE, JSON.stringify(data, null, 2));
+}
 
 const router = Router();
 
@@ -134,14 +152,32 @@ router.get('/settlement', (req, res) => {
     // Sort by totalNet ascending (most owed first, then most earning)
     players.sort((a, b) => a.totalNet - b.totalNet);
 
-    // Totals
-    const toCollect = players.filter(p => p.totalNet < 0).reduce((s, p) => s + Math.abs(p.totalNet), 0);
-    const toPayOut = players.filter(p => p.totalNet > 0).reduce((s, p) => s + p.totalNet, 0);
+    // Merge in settled status from persistence
+    const settlements = readSettlements();
+    for (const p of players) {
+      const s = settlements[p.initials];
+      if (s && s.settled) {
+        p.settled = true;
+        p.settledAt = s.settledAt || null;
+        p.settledAmount = s.amount ?? p.totalNet;
+      } else {
+        p.settled = false;
+        p.settledAt = null;
+        p.settledAmount = null;
+      }
+    }
+
+    // Totals — only count unsettled players
+    const unsettled = players.filter(p => !p.settled);
+    const toCollect = unsettled.filter(p => p.totalNet < 0).reduce((s, p) => s + Math.abs(p.totalNet), 0);
+    const toPayOut = unsettled.filter(p => p.totalNet > 0).reduce((s, p) => s + p.totalNet, 0);
+    const settledCount = players.filter(p => p.settled).length;
 
     res.json({
       players,
       summary: {
         totalPlayers: players.length,
+        settledCount,
         toCollect: Math.round(toCollect * 100) / 100,
         toPayOut: Math.round(toPayOut * 100) / 100,
         houseBalance: Math.round((toCollect - toPayOut) * 100) / 100,
@@ -149,6 +185,46 @@ router.get('/settlement', (req, res) => {
     });
   } catch (error) {
     console.error('Error computing settlement:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/games/settlement/mark - Mark a player as settled
+router.post('/settlement/mark', (req, res) => {
+  try {
+    const { initials, amount } = req.body;
+    if (!initials) {
+      return res.status(400).json({ error: 'Player initials required' });
+    }
+
+    const settlements = readSettlements();
+    settlements[initials] = {
+      settled: true,
+      settledAt: new Date().toISOString(),
+      amount: amount ?? null,
+    };
+    writeSettlements(settlements);
+    res.json({ message: `${initials} marked as settled`, settlement: settlements[initials] });
+  } catch (error) {
+    console.error('Error marking settlement:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/games/settlement/unmark - Unmark a player as settled
+router.post('/settlement/unmark', (req, res) => {
+  try {
+    const { initials } = req.body;
+    if (!initials) {
+      return res.status(400).json({ error: 'Player initials required' });
+    }
+
+    const settlements = readSettlements();
+    delete settlements[initials];
+    writeSettlements(settlements);
+    res.json({ message: `${initials} unmarked as settled` });
+  } catch (error) {
+    console.error('Error unmarking settlement:', error);
     res.status(500).json({ error: error.message });
   }
 });

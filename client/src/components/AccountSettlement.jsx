@@ -6,6 +6,7 @@ function AccountSettlement() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [expandedPlayers, setExpandedPlayers] = useState(new Set());
+  const [settling, setSettling] = useState(null); // initials currently being toggled
 
   const fetchSettlement = useCallback(async () => {
     try {
@@ -36,6 +37,36 @@ function AccountSettlement() {
     });
   };
 
+  const handleMarkSettled = async (initials, amount) => {
+    setSettling(initials);
+    try {
+      const response = await fetch('/api/games/settlement/mark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initials, amount }),
+      });
+      if (response.ok) {
+        await fetchSettlement();
+      }
+    } catch (err) { /* silent */ }
+    finally { setSettling(null); }
+  };
+
+  const handleUnmarkSettled = async (initials) => {
+    setSettling(initials);
+    try {
+      const response = await fetch('/api/games/settlement/unmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initials }),
+      });
+      if (response.ok) {
+        await fetchSettlement();
+      }
+    } catch (err) { /* silent */ }
+    finally { setSettling(null); }
+  };
+
   return (
     <div className="card">
       <button
@@ -46,6 +77,11 @@ function AccountSettlement() {
           Account Settlement
         </h2>
         <div className="flex items-center gap-2">
+          {data && data.summary.settledCount > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-600/30 text-green-400">
+              {data.summary.settledCount}/{data.summary.totalPlayers} paid
+            </span>
+          )}
           <span className="text-xs text-gray-500">All Games</span>
           <span className="text-gray-500 text-xs">{expanded ? '▲' : '▼'}</span>
         </div>
@@ -74,7 +110,7 @@ function AccountSettlement() {
                   </div>
                 </div>
                 <div className="rounded p-2.5 text-center" style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
-                  <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'rgba(212,175,55,0.7)' }}>House Balance</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'rgba(212,175,55,0.7)' }}>Remaining</div>
                   <div className={`text-sm font-bold mt-0.5 ${data.summary.houseBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {data.summary.houseBalance >= 0 ? '+' : ''}{formatCurrency(data.summary.houseBalance)}
                   </div>
@@ -97,19 +133,24 @@ function AccountSettlement() {
                 {data.players.map((p) => {
                   const isPlayerExpanded = expandedPlayers.has(p.initials);
                   const hasMultipleGames = p.games.length > 1;
+                  const isSettling = settling === p.initials;
+                  const isEven = p.totalNet === 0;
 
                   return (
-                    <div key={p.initials}>
+                    <div key={p.initials} className={p.settled ? 'opacity-60' : ''}>
                       <div
-                        className={`grid grid-cols-12 gap-1 px-3 py-2 text-xs items-center ${hasMultipleGames ? 'cursor-pointer hover:bg-white/5' : ''}`}
+                        className={`grid grid-cols-12 gap-1 px-3 py-2 text-xs items-center ${hasMultipleGames && !p.settled ? 'cursor-pointer hover:bg-white/5' : ''}`}
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                        onClick={() => hasMultipleGames && togglePlayer(p.initials)}
+                        onClick={() => hasMultipleGames && !p.settled && togglePlayer(p.initials)}
                       >
                         <div className="col-span-2 flex items-center gap-1">
-                          {hasMultipleGames && (
+                          {hasMultipleGames && !p.settled && (
                             <span className="text-[8px] text-gray-600 inline-block transition-transform" style={{ transform: isPlayerExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
                           )}
-                          <span className="font-bold" style={{ color: 'var(--nbc-gold)' }}>{p.initials}</span>
+                          {p.settled && (
+                            <span className="text-green-500 text-[10px]">✓</span>
+                          )}
+                          <span className={`font-bold ${p.settled ? 'line-through text-gray-500' : ''}`} style={{ color: p.settled ? undefined : 'var(--nbc-gold)' }}>{p.initials}</span>
                         </div>
                         <span className="col-span-2 text-center text-gray-400">
                           {p.squaresCost > 0 ? formatCurrency(p.squaresCost) : '-'}
@@ -123,19 +164,36 @@ function AccountSettlement() {
                         <span className="col-span-2 text-center text-green-400/80">
                           {p.betsWon > 0 ? formatCurrency(p.betsWon) : '-'}
                         </span>
-                        <div className="col-span-2 text-right">
-                          {p.totalNet === 0 ? (
-                            <span className="text-gray-500 font-bold">EVEN</span>
-                          ) : p.totalNet > 0 ? (
-                            <span className="text-green-400 font-bold">+{formatCurrency(p.totalNet)}</span>
+                        <div className="col-span-2 flex items-center justify-end gap-1.5">
+                          {p.settled ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUnmarkSettled(p.initials); }}
+                              disabled={isSettling}
+                              className="text-[9px] text-gray-500 hover:text-yellow-400 underline transition-colors disabled:opacity-50"
+                            >
+                              undo
+                            </button>
+                          ) : isEven ? (
+                            <span className="text-gray-500 font-bold text-[10px]">EVEN</span>
                           ) : (
-                            <span className="text-red-400 font-bold">{formatCurrency(p.totalNet)}</span>
+                            <>
+                              <span className={`font-bold ${p.totalNet > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {p.totalNet > 0 ? '+' : ''}{formatCurrency(p.totalNet)}
+                              </span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkSettled(p.initials, p.totalNet); }}
+                                disabled={isSettling}
+                                className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-600/40 hover:bg-green-600 text-green-300 transition-colors disabled:opacity-50"
+                              >
+                                {isSettling ? '...' : 'Paid'}
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
 
                       {/* Per-game breakdown */}
-                      {isPlayerExpanded && p.games.map(g => (
+                      {isPlayerExpanded && !p.settled && p.games.map(g => (
                         <div
                           key={g.id}
                           className="grid grid-cols-12 gap-1 px-3 py-1.5 text-[10px] items-center"
@@ -166,49 +224,80 @@ function AccountSettlement() {
                 })}
               </div>
 
-              {/* Action Summary - Who owes / who gets paid */}
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {/* Collect from */}
-                <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}>
-                  <div className="text-[10px] font-bold text-red-400/80 uppercase tracking-wider mb-2">
-                    Collect From
-                  </div>
-                  {data.players.filter(p => p.totalNet < 0).length === 0 ? (
-                    <p className="text-xs text-gray-600">Nobody</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {data.players.filter(p => p.totalNet < 0).map(p => (
-                        <div key={p.initials} className="flex justify-between text-xs">
-                          <span className="text-gray-400 font-semibold">{p.initials}</span>
-                          <span className="text-red-400 font-bold">{formatCurrency(Math.abs(p.totalNet))}</span>
-                        </div>
-                      ))}
+              {/* Action Summary - Who owes / who gets paid (unsettled only) */}
+              {(() => {
+                const unsettledOwes = data.players.filter(p => !p.settled && p.totalNet < 0);
+                const unsettledOwed = data.players.filter(p => !p.settled && p.totalNet > 0);
+                if (unsettledOwes.length === 0 && unsettledOwed.length === 0) {
+                  return (
+                    <div className="mt-4 p-4 rounded-lg text-center" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                      <span className="text-green-400 font-bold text-sm">All accounts settled!</span>
                     </div>
-                  )}
-                </div>
+                  );
+                }
+                return (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {/* Collect from */}
+                    <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                      <div className="text-[10px] font-bold text-red-400/80 uppercase tracking-wider mb-2">
+                        Collect From
+                      </div>
+                      {unsettledOwes.length === 0 ? (
+                        <p className="text-xs text-gray-600">All collected ✓</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {unsettledOwes.map(p => (
+                            <div key={p.initials} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-400 font-semibold">{p.initials}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-400 font-bold">{formatCurrency(Math.abs(p.totalNet))}</span>
+                                <button
+                                  onClick={() => handleMarkSettled(p.initials, p.totalNet)}
+                                  disabled={settling === p.initials}
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-600/30 hover:bg-green-600 text-green-300 transition-colors disabled:opacity-50"
+                                >
+                                  {settling === p.initials ? '...' : 'Paid'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                {/* Pay out to */}
-                <div className="rounded-lg p-3" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
-                  <div className="text-[10px] font-bold text-green-400/80 uppercase tracking-wider mb-2">
-                    Pay Out To
-                  </div>
-                  {data.players.filter(p => p.totalNet > 0).length === 0 ? (
-                    <p className="text-xs text-gray-600">Nobody</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {data.players.filter(p => p.totalNet > 0).map(p => (
-                        <div key={p.initials} className="flex justify-between text-xs">
-                          <span className="text-gray-400 font-semibold">{p.initials}</span>
-                          <span className="text-green-400 font-bold">{formatCurrency(p.totalNet)}</span>
+                    {/* Pay out to */}
+                    <div className="rounded-lg p-3" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
+                      <div className="text-[10px] font-bold text-green-400/80 uppercase tracking-wider mb-2">
+                        Pay Out To
+                      </div>
+                      {unsettledOwed.length === 0 ? (
+                        <p className="text-xs text-gray-600">All paid out ✓</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {unsettledOwed.map(p => (
+                            <div key={p.initials} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-400 font-semibold">{p.initials}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-400 font-bold">{formatCurrency(p.totalNet)}</span>
+                                <button
+                                  onClick={() => handleMarkSettled(p.initials, p.totalNet)}
+                                  disabled={settling === p.initials}
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-600/30 hover:bg-green-600 text-green-300 transition-colors disabled:opacity-50"
+                                >
+                                  {settling === p.initials ? '...' : 'Paid'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                );
+              })()}
 
               {/* Pending Bets Warning */}
-              {data.players.some(p => p.betsWagered > p.betsWon + p.betsLost) && (
+              {data.players.some(p => !p.settled && p.betsWagered > p.betsWon + p.betsLost) && (
                 <div className="mt-3 p-2.5 rounded text-xs" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.15)' }}>
                   <span className="text-yellow-500 font-semibold">Note:</span>
                   <span className="text-yellow-500/80 ml-1">
