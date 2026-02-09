@@ -6,6 +6,7 @@ import {
   createGame as createNewGame,
   migrateExistingGame
 } from './gamesService.js';
+import { getPlayerGameStats } from './statsService.js';
 
 // Initialize - migrate existing game if needed
 let initialized = false;
@@ -283,7 +284,7 @@ export function findWinnerForScores(homeScore, awayScore, gameId) {
 }
 
 // Mark quarter winner
-export function markQuarterWinner(quarter, gameId) {
+export async function markQuarterWinner(quarter, gameId) {
   const data = getGameData(gameId);
   const winner = findWinnerForScores(data.scores.home, data.scores.away, gameId);
 
@@ -301,6 +302,8 @@ export function markQuarterWinner(quarter, gameId) {
 
   if (quarter === 'q4') {
     data.gameStatus = 'completed';
+    // Auto-settle all bets that can be evaluated from the final score and player stats
+    await autoSettleBets(data);
   }
 
   addAuditEntry(data, 'quarter_marked', {
@@ -848,6 +851,219 @@ export function getBetStats(gameId) {
       netPosition: roundedProfit
     }
   };
+}
+
+// --- Auto-Settle Bets ---
+
+// Match a bet player name (e.g. "Sam Darnold") to a stats player name (e.g. "S. Darnold")
+// by comparing last names case-insensitively
+function matchPlayerName(betName, statsName) {
+  if (!betName || !statsName) return false;
+  const betLast = betName.trim().split(/\s+/).pop().toLowerCase();
+  const statsLast = statsName.trim().split(/\s+/).pop().toLowerCase();
+  return betLast === statsLast;
+}
+
+// Extract stat value for a given market from player stats
+function getPlayerStatValue(market, playerName, playerStats) {
+  if (!playerStats) return null;
+  const { passing = [], rushing = [], receiving = [] } = playerStats;
+
+  switch (market) {
+    case 'player_pass_yds':
+    case 'Passing Yards': {
+      const p = passing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_pass_tds':
+    case 'Passing TDs': {
+      const p = passing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.td : null;
+    }
+    case 'player_rush_yds':
+    case 'Rushing Yards': {
+      const p = rushing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_receptions':
+    case 'Receptions': {
+      const p = receiving.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.rec : null;
+    }
+    case 'player_reception_yds':
+    case 'Receiving Yards': {
+      const p = receiving.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_anytime_td':
+    case 'Anytime TD': {
+      const rushP = rushing.find(s => matchPlayerName(playerName, s.name));
+      const recP = receiving.find(s => matchPlayerName(playerName, s.name));
+      // Only rushing and receiving TDs count for "anytime TD scorer" (passing TDs don't count for passer)
+      return (rushP?.td || 0) + (recP?.td || 0);
+    }
+    default:
+      return null;
+  }
+}
+
+// Parse Over/Under/Yes/No direction from bet description
+function parsePropDirection(description) {
+  if (!description) return null;
+  const lower = description.toLowerCase();
+  if (lower.includes(' over ')) return 'Over';
+  if (lower.includes(' under ')) return 'Under';
+  if (lower.includes(' yes')) return 'Yes';
+  if (lower.includes(' no')) return 'No';
+  return null;
+}
+
+// Evaluate a single bet leg against the final game result
+// Returns 'won', 'lost', 'push', or null (cannot determine)
+function evaluateLeg(market, outcome, point, homeTeam, awayTeam, homeScore, awayScore, playerStats, description) {
+  const totalScore = homeScore + awayScore;
+
+  switch (market) {
+    case 'h2h': {
+      if (homeScore === awayScore) return 'push';
+      const winningTeam = homeScore > awayScore ? homeTeam : awayTeam;
+      return outcome === winningTeam ? 'won' : 'lost';
+    }
+
+    case 'spreads': {
+      if (point === null || point === undefined) return null;
+      let adjustedDiff;
+      if (outcome === homeTeam) {
+        adjustedDiff = (homeScore + point) - awayScore;
+      } else if (outcome === awayTeam) {
+        adjustedDiff = (awayScore + point) - homeScore;
+      } else {
+        return null;
+      }
+      if (adjustedDiff === 0) return 'push';
+      return adjustedDiff > 0 ? 'won' : 'lost';
+    }
+
+    case 'totals': {
+      if (point === null || point === undefined) return null;
+      if (totalScore === point) return 'push';
+      if (outcome === 'Over') {
+        return totalScore > point ? 'won' : 'lost';
+      } else if (outcome === 'Under') {
+        return totalScore < point ? 'won' : 'lost';
+      }
+      return null;
+    }
+
+    default:
+      break;
+  }
+
+  // Player props — evaluate using player stats if available
+  if (playerStats) {
+    const playerName = outcome; // For props, outcome is the player name
+    const statValue = getPlayerStatValue(market, playerName, playerStats);
+
+    if (statValue !== null) {
+      const isAnytimeTd = market === 'player_anytime_td' || market === 'Anytime TD';
+      if (isAnytimeTd) {
+        const direction = parsePropDirection(description);
+        const scoredTd = statValue > 0;
+        if (direction === 'Yes' || direction === null) {
+          if (scoredTd) return 'won';
+          return 'lost'; // Game is over at this point
+        }
+        if (direction === 'No') {
+          if (scoredTd) return 'lost';
+          return 'won';
+        }
+      }
+
+      // Over/Under props
+      const direction = parsePropDirection(description);
+      if (direction === 'Over') {
+        if (statValue > point) return 'won';
+        if (statValue === point) return 'push';
+        return 'lost';
+      }
+      if (direction === 'Under') {
+        if (statValue > point) return 'lost';
+        if (statValue === point) return 'push';
+        return 'won';
+      }
+    }
+  }
+
+  // Unknown markets or no stats available
+  return null;
+}
+
+// Auto-settle all pending bets that can be evaluated from the final score and player stats
+// Called internally when the game ends (q4 marked)
+async function autoSettleBets(data) {
+  ensureBets(data);
+
+  const homeTeam = data.teams.home.name;
+  const awayTeam = data.teams.away.name;
+  const homeScore = data.scores.home;
+  const awayScore = data.scores.away;
+
+  // Fetch player stats for prop evaluation
+  let playerStats = null;
+  try {
+    playerStats = await getPlayerGameStats();
+  } catch (err) {
+    console.error('Failed to fetch player stats for auto-settle:', err.message);
+  }
+
+  const pendingBets = data.bets.filter(b => b.status === 'pending');
+  let settledCount = 0;
+
+  for (const bet of pendingBets) {
+    let result = null;
+
+    if (bet.type === 'parlay' && bet.legs) {
+      const legResults = bet.legs.map(leg =>
+        evaluateLeg(leg.market, leg.outcome, leg.point, homeTeam, awayTeam, homeScore, awayScore, playerStats, leg.description)
+      );
+
+      if (legResults.some(r => r === 'lost')) {
+        result = 'lost';
+      } else if (legResults.every(r => r !== null)) {
+        // All legs resolved — if none lost, it's a win (pushes reduce but still pay in casual play)
+        result = 'won';
+      }
+      // Some legs null and none lost → stays pending for admin
+    } else if (bet.selection) {
+      const sel = bet.selection;
+      result = evaluateLeg(sel.market, sel.outcome, sel.point, homeTeam, awayTeam, homeScore, awayScore, playerStats, sel.description);
+    }
+
+    if (result) {
+      bet.status = result;
+      bet.settledAt = new Date().toISOString();
+      bet.result = {
+        payout: result === 'won' ? bet.potentialPayout : 0
+      };
+
+      addAuditEntry(data, 'bet_settled', {
+        betId: bet.id,
+        player: bet.playerInitials,
+        description: bet.description,
+        outcome: result,
+        payout: bet.result.payout,
+        auto: true
+      });
+
+      settledCount++;
+    }
+  }
+
+  if (settledCount > 0) {
+    console.log(`Auto-settled ${settledCount} bet(s) after game ended`);
+  }
+
+  return settledCount;
 }
 
 // --- Audit Log ---

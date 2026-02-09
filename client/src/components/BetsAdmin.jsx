@@ -4,6 +4,7 @@ import { formatOdds, getOddsColorClass, formatCurrency, evaluateBetOutcome } fro
 function BetsAdmin({ gameId, gameData }) {
   const [bets, setBets] = useState([]);
   const [betStats, setBetStats] = useState(null);
+  const [playerStats, setPlayerStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(null);
   const [expandedParlays, setExpandedParlays] = useState(new Set());
@@ -44,15 +45,26 @@ function BetsAdmin({ gameId, gameData }) {
     finally { setLoading(false); }
   }, [gameId]);
 
+  const fetchPlayerStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/odds/player-stats');
+      if (response.ok) {
+        setPlayerStats(await response.json());
+      }
+    } catch (err) { /* silent */ }
+  }, []);
+
   useEffect(() => {
     fetchBets();
     fetchStats();
+    fetchPlayerStats();
     const interval = setInterval(() => {
       fetchBets();
       fetchStats();
+      fetchPlayerStats();
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchBets, fetchStats]);
+  }, [fetchBets, fetchStats, fetchPlayerStats]);
 
   const handleSettle = async (betId, outcome) => {
     setSettling(betId);
@@ -114,7 +126,7 @@ function BetsAdmin({ gameId, gameData }) {
 
   // Evaluate decided status for each pending bet
   const pendingWithStatus = pending.map(bet => {
-    const evaluation = gameData ? evaluateBetOutcome(bet, gameData) : { decided: false, outcome: null, reason: null };
+    const evaluation = gameData ? evaluateBetOutcome(bet, gameData, playerStats) : { decided: false, outcome: null, reason: null };
     return { ...bet, evaluation };
   });
 

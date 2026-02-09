@@ -202,7 +202,76 @@ const PLAYER_COLORS = [
 
 // Evaluate whether a bet's outcome is decided based on current game state.
 // Returns { decided: bool, outcome: 'won'|'lost'|'push'|null, reason: string|null }
-function evaluateLegOutcome(leg, gameData) {
+// Match a bet player name (e.g. "Sam Darnold") to a stats player name (e.g. "S. Darnold")
+// by comparing last names case-insensitively
+function matchPlayerName(betName, statsName) {
+  if (!betName || !statsName) return false;
+  const betLast = betName.trim().split(/\s+/).pop().toLowerCase();
+  const statsLast = statsName.trim().split(/\s+/).pop().toLowerCase();
+  return betLast === statsLast;
+}
+
+// Extract the stat value for a given market from player stats
+function getPlayerStatValue(market, playerName, playerStats) {
+  if (!playerStats) return null;
+
+  // Search through all stat categories for a matching player
+  const { passing = [], rushing = [], receiving = [] } = playerStats;
+
+  switch (market) {
+    case 'player_pass_yds':
+    case 'Passing Yards': {
+      const p = passing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_pass_tds':
+    case 'Passing TDs': {
+      const p = passing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.td : null;
+    }
+    case 'player_rush_yds':
+    case 'Rushing Yards': {
+      const p = rushing.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_receptions':
+    case 'Receptions': {
+      const p = receiving.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.rec : null;
+    }
+    case 'player_reception_yds':
+    case 'Receiving Yards': {
+      const p = receiving.find(s => matchPlayerName(playerName, s.name));
+      return p ? p.yards : null;
+    }
+    case 'player_anytime_td':
+    case 'Anytime TD': {
+      // Check if player scored a TD in any category
+      const passP = passing.find(s => matchPlayerName(playerName, s.name));
+      const rushP = rushing.find(s => matchPlayerName(playerName, s.name));
+      const recP = receiving.find(s => matchPlayerName(playerName, s.name));
+      const totalTds = (passP?.td || 0) + (rushP?.td || 0) + (recP?.td || 0);
+      // Only count rushing and receiving TDs for "anytime TD scorer" (passing TDs don't count for the passer)
+      const scoringTds = (rushP?.td || 0) + (recP?.td || 0);
+      return scoringTds;
+    }
+    default:
+      return null;
+  }
+}
+
+// Parse the Over/Under direction from bet description
+function parsePropDirection(description) {
+  if (!description) return null;
+  const lower = description.toLowerCase();
+  if (lower.includes(' over ')) return 'Over';
+  if (lower.includes(' under ')) return 'Under';
+  if (lower.includes(' yes')) return 'Yes';
+  if (lower.includes(' no')) return 'No';
+  return null;
+}
+
+function evaluateLegOutcome(leg, gameData, playerStats) {
   const { scores, teams, gameStatus } = gameData;
   const totalScore = scores.home + scores.away;
   const gameOver = gameStatus === 'completed';
@@ -266,11 +335,52 @@ function evaluateLegOutcome(leg, gameData) {
     }
   }
 
-  // Player props or unknown markets — can't auto-evaluate
+  // Player props — evaluate using player stats if available
+  if (playerStats) {
+    const playerName = outcome; // For props, outcome is the player name
+    const statValue = getPlayerStatValue(market, playerName, playerStats);
+
+    if (statValue !== null) {
+      // Anytime TD: special case — no over/under, just yes/no
+      const isAnytimeTd = market === 'player_anytime_td' || market === 'Anytime TD';
+      if (isAnytimeTd) {
+        const direction = parsePropDirection(leg.description);
+        const scoredTd = statValue > 0;
+        if (direction === 'Yes' || direction === null) {
+          // "Yes" bet or default: player must score at least 1 TD
+          if (scoredTd) return { decided: true, outcome: 'won', reason: `Scored ${statValue} TD(s)` };
+          if (gameOver) return { decided: true, outcome: 'lost', reason: 'No TDs scored' };
+          return { decided: false, outcome: null, reason: null };
+        }
+        if (direction === 'No') {
+          if (scoredTd) return { decided: true, outcome: 'lost', reason: `Scored ${statValue} TD(s)` };
+          if (gameOver) return { decided: true, outcome: 'won', reason: 'No TDs scored' };
+          return { decided: false, outcome: null, reason: null };
+        }
+      }
+
+      // Over/Under props
+      const direction = parsePropDirection(leg.description);
+      if (direction === 'Over') {
+        if (statValue > point) return { decided: true, outcome: 'won', reason: `${statValue} > ${point}` };
+        if (statValue === point && gameOver) return { decided: true, outcome: 'push', reason: `${statValue} = ${point}` };
+        if (gameOver) return { decided: true, outcome: 'lost', reason: `${statValue} < ${point}` };
+        return { decided: false, outcome: null, reason: null };
+      }
+      if (direction === 'Under') {
+        if (statValue > point) return { decided: true, outcome: 'lost', reason: `${statValue} > ${point}` };
+        if (statValue === point && gameOver) return { decided: true, outcome: 'push', reason: `${statValue} = ${point}` };
+        if (gameOver) return { decided: true, outcome: 'won', reason: `${statValue} < ${point}` };
+        return { decided: false, outcome: null, reason: null };
+      }
+    }
+  }
+
+  // Unknown markets or no stats available — can't auto-evaluate
   return { decided: false, outcome: null, reason: null };
 }
 
-export function evaluateBetOutcome(bet, gameData) {
+export function evaluateBetOutcome(bet, gameData, playerStats) {
   if (!gameData || !gameData.scores || !gameData.teams) {
     return { decided: false, outcome: null, reason: null };
   }
@@ -279,7 +389,7 @@ export function evaluateBetOutcome(bet, gameData) {
     if (!bet.legs || bet.legs.length === 0) {
       return { decided: false, outcome: null, reason: null };
     }
-    const legResults = bet.legs.map(leg => evaluateLegOutcome(leg, gameData));
+    const legResults = bet.legs.map(leg => evaluateLegOutcome(leg, gameData, playerStats));
     // If any leg is lost, the parlay is lost
     const anyLost = legResults.some(r => r.decided && r.outcome === 'lost');
     if (anyLost) return { decided: true, outcome: 'lost', reason: 'One or more legs lost' };
@@ -294,7 +404,7 @@ export function evaluateBetOutcome(bet, gameData) {
 
   // Straight bet
   if (!bet.selection) return { decided: false, outcome: null, reason: null };
-  return evaluateLegOutcome(bet.selection, gameData);
+  return evaluateLegOutcome(bet.selection, gameData, playerStats);
 }
 
 // Get a consistent color for a player based on their initials

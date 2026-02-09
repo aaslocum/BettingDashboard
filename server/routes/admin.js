@@ -83,7 +83,7 @@ router.post('/lock', (req, res) => {
 });
 
 // POST /api/admin/quarter - Mark a quarter as complete
-router.post('/quarter', (req, res) => {
+router.post('/quarter', async (req, res) => {
   try {
     const { quarter, gameId } = req.body;
 
@@ -91,7 +91,7 @@ router.post('/quarter', (req, res) => {
       return res.status(400).json({ error: 'Valid quarter (q1, q2, q3, q4) required' });
     }
 
-    const data = markQuarterWinner(quarter, gameId);
+    const data = await markQuarterWinner(quarter, gameId);
     res.json({ message: `Quarter ${quarter} marked complete`, data });
   } catch (error) {
     console.error('Error marking quarter:', error);
