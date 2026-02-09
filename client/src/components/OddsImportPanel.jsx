@@ -213,7 +213,7 @@ function OddsImportPanel() {
             </button>
           </div>
           <p className="text-[10px] text-gray-600 text-center">
-            3 days of hourly data · ~72 API calls per category · Data saved to disk
+            3 days at 15-min intervals · ~288 API calls per category · Data saved to disk
           </p>
         </div>
       )}
@@ -295,9 +295,9 @@ function OddsImportPanel() {
 
       {/* Info */}
       <div className="mt-4 p-3 rounded text-xs text-blue-300" style={{ background: 'rgba(59,130,246,0.08)' }}>
-        <strong>How it works:</strong> Imports 3 days of hourly snapshots from The Odds API historical endpoint.
+        <strong>How it works:</strong> Imports 3 days of snapshots at 15-minute intervals from The Odds API historical endpoint.
         Data is saved to disk and served to player charts without additional API calls.
-        Live polling continues to add new data points as odds change.
+        Charts display at 5-minute resolution. Live polling continues to add new data points as odds change.
       </div>
     </div>
   );

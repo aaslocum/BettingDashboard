@@ -232,12 +232,12 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
 
 /**
  * Fetch historical game odds from The Odds API
- * 3 days of data, hourly intervals = 72 API calls.
+ * 3 days of data, 15-minute intervals = ~288 API calls.
  *
  * Cost: 10 credits × 3 markets × 1 region = 30 per call
- * 72 calls × 30 = ~2160 quota
+ * 288 calls × 30 = ~8640 quota
  */
-export async function fetchHistoricalOdds(apiKey, daysBack = 3, intervalHours = 1) {
+export async function fetchHistoricalOdds(apiKey, daysBack = 3, intervalHours = 0.25) {
   if (!apiKey) {
     throw new Error('ODDS_API_KEY not configured');
   }
@@ -312,12 +312,12 @@ export async function fetchHistoricalOdds(apiKey, daysBack = 3, intervalHours = 
 /**
  * Fetch historical player props from The Odds API
  * Uses the per-event historical endpoint.
- * 3 days of data, hourly intervals = 72 API calls.
+ * 3 days of data, 15-minute intervals = ~288 API calls.
  *
  * Cost: 10 credits × 6 markets × 1 region = 60 per call
- * 72 calls × 60 = ~4320 quota
+ * 288 calls × 60 = ~17280 quota
  */
-export async function fetchHistoricalPlayerProps(apiKey, eventId, daysBack = 3, intervalHours = 1) {
+export async function fetchHistoricalPlayerProps(apiKey, eventId, daysBack = 3, intervalHours = 0.25) {
   if (!apiKey) {
     throw new Error('ODDS_API_KEY not configured');
   }

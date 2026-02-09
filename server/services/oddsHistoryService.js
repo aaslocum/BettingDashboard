@@ -90,9 +90,9 @@ export function recordOddsSnapshot(eventId, entries) {
         p: entry.point ?? null
       });
 
-      // Cap at 5000 entries per line (safety valve for 2+ weeks of data)
-      if (line.length > 5000) {
-        history.lines[entry.key] = line.slice(-5000);
+      // Cap at 10000 entries per line (safety valve — supports 5-min resolution over weeks)
+      if (line.length > 10000) {
+        history.lines[entry.key] = line.slice(-10000);
       }
     }
 
@@ -235,7 +235,7 @@ function generateMockHistory(oddsKey) {
   const baseOdds = getMockBaseOdds(oddsKey);
   const now = Date.now();
   const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-  const intervalMs = 8 * 60 * 60 * 1000; // every 8 hours
+  const intervalMs = 30 * 60 * 1000; // every 30 minutes
   const numPoints = Math.floor(oneWeekMs / intervalMs);
 
   const points = [];

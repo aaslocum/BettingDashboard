@@ -15,7 +15,8 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
     }
   }, [eventId, oddsKey, fetchHistory]);
 
-  // Transform data for recharts — normalize to hourly data points
+  // Transform data for recharts — normalize to 5-minute interval data points
+  const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   const chartData = (() => {
     const raw = (historyData?.history || []).map(point => ({
       time: new Date(point.t).getTime(),
@@ -24,22 +25,20 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
 
     if (raw.length < 2) return raw;
 
-    // Round down to the nearest hour
-    const floorHour = (ts) => {
-      const d = new Date(ts);
-      d.setMinutes(0, 0, 0);
-      return d.getTime();
+    // Round down to the nearest 5-minute boundary
+    const floor5Min = (ts) => {
+      return Math.floor(ts / INTERVAL_MS) * INTERVAL_MS;
     };
 
-    const firstHour = floorHour(raw[0].time);
-    // Ceiling of last data point's hour
-    const lastHour = floorHour(raw[raw.length - 1].time) + 3600000;
-    const hourly = [];
+    const firstSlot = floor5Min(raw[0].time);
+    // Ceiling of last data point's 5-min slot
+    const lastSlot = floor5Min(raw[raw.length - 1].time) + INTERVAL_MS;
+    const points = [];
     let rawIdx = 0;
     let lastOddsValue = raw[0].odds;
 
-    for (let t = firstHour; t <= lastHour; t += 3600000) {
-      // Advance rawIdx to the last raw point at or before this hour mark
+    for (let t = firstSlot; t <= lastSlot; t += INTERVAL_MS) {
+      // Advance rawIdx to the last raw point at or before this slot
       while (rawIdx < raw.length - 1 && raw[rawIdx + 1].time <= t) {
         rawIdx++;
       }
@@ -47,10 +46,10 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
       if (raw[rawIdx].time <= t) {
         lastOddsValue = raw[rawIdx].odds;
       }
-      hourly.push({ time: t, odds: lastOddsValue });
+      points.push({ time: t, odds: lastOddsValue });
     }
 
-    return hourly;
+    return points;
   })();
 
   // Trend calculation
@@ -150,18 +149,28 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
                   type="number"
                   domain={['dataMin', 'dataMax']}
                   ticks={(() => {
-                    // Generate evenly spaced tick marks
+                    // Generate evenly spaced tick marks scaled to data range
                     if (chartData.length < 2) return undefined;
                     const min = chartData[0].time;
                     const max = chartData[chartData.length - 1].time;
                     const span = max - min;
-                    // Pick tick interval: 3h for <1d, 6h for 1-2d, 12h for 2-4d, 24h for 4d+
                     const hours = span / 3600000;
-                    const tickInterval = hours <= 24 ? 3 : hours <= 48 ? 6 : hours <= 96 ? 12 : 24;
-                    const tickMs = tickInterval * 3600000;
+                    // Pick tick interval based on time span:
+                    // <3h → 15min, 3-6h → 30min, 6-12h → 1h, 12-24h → 3h,
+                    // 1-2d → 6h, 2-4d → 12h, 4d+ → 24h
+                    let tickMinutes;
+                    if (hours <= 3) tickMinutes = 15;
+                    else if (hours <= 6) tickMinutes = 30;
+                    else if (hours <= 12) tickMinutes = 60;
+                    else if (hours <= 24) tickMinutes = 180;
+                    else if (hours <= 48) tickMinutes = 360;
+                    else if (hours <= 96) tickMinutes = 720;
+                    else tickMinutes = 1440;
+                    const tickMs = tickMinutes * 60 * 1000;
                     const ticks = [];
-                    // Start from the first data point's hour
-                    for (let t = min; t <= max; t += tickMs) {
+                    // Align to tick boundary
+                    const firstTick = Math.ceil(min / tickMs) * tickMs;
+                    for (let t = firstTick; t <= max; t += tickMs) {
                       ticks.push(t);
                     }
                     return ticks;
@@ -170,7 +179,7 @@ function OddsHistoryModal({ eventId, oddsKey, label, currentOdds, onClose }) {
                     const d = new Date(ts);
                     if (isMultiDay) {
                       return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
-                        d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+                        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                     }
                     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                   }}

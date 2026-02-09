@@ -335,11 +335,11 @@ router.get('/odds-import', async (req, res) => {
 
     // --- Game Odds ---
     if ((importType === 'all' || importType === 'game') && !aborted) {
-      send('status', { phase: 'game_odds', message: 'Fetching 3 days of game odds (h2h, spreads, totals)...' });
+      send('status', { phase: 'game_odds', message: 'Fetching 3 days of game odds at 15-min intervals (h2h, spreads, totals)...' });
 
       const now = new Date();
       const daysBack = 3;
-      const intervalHours = 1;
+      const intervalHours = 0.25;
       const cutoff = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
       let currentDate = new Date(now.getTime() - intervalHours * 60 * 60 * 1000);
       let callCount = 0;
@@ -425,12 +425,12 @@ router.get('/odds-import', async (req, res) => {
 
     // --- Player Props ---
     if ((importType === 'all' || importType === 'props') && !aborted) {
-      send('status', { phase: 'player_props', message: 'Fetching 3 days of player props (6 markets)...' });
+      send('status', { phase: 'player_props', message: 'Fetching 3 days of player props at 15-min intervals (6 markets)...' });
 
       const propMarkets = 'player_pass_tds,player_pass_yds,player_rush_yds,player_receptions,player_reception_yds,player_anytime_td';
       const now = new Date();
       const daysBack = 3;
-      const intervalHours = 1;
+      const intervalHours = 0.25;
       const cutoff = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
       let currentDate = new Date(now.getTime() - intervalHours * 60 * 60 * 1000);
       let callCount = 0;
