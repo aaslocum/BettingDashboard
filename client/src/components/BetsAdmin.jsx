@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { formatOdds, getOddsColorClass, formatCurrency } from '../utils/helpers';
+import { formatOdds, getOddsColorClass, formatCurrency, evaluateBetOutcome } from '../utils/helpers';
 
-function BetsAdmin({ gameId }) {
+function BetsAdmin({ gameId, gameData }) {
   const [bets, setBets] = useState([]);
   const [betStats, setBetStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -112,6 +112,43 @@ function BetsAdmin({ gameId }) {
   const pending = bets.filter(b => b.status === 'pending');
   const settled = bets.filter(b => b.status !== 'pending');
 
+  // Evaluate decided status for each pending bet
+  const pendingWithStatus = pending.map(bet => {
+    const evaluation = gameData ? evaluateBetOutcome(bet, gameData) : { decided: false, outcome: null, reason: null };
+    return { ...bet, evaluation };
+  });
+
+  // Sort: decided bets first, then undecided
+  const sortedPending = [...pendingWithStatus].sort((a, b) => {
+    if (a.evaluation.decided && !b.evaluation.decided) return -1;
+    if (!a.evaluation.decided && b.evaluation.decided) return 1;
+    return 0;
+  });
+
+  const decidedBets = pendingWithStatus.filter(b => b.evaluation.decided);
+
+  const handleSettleDecided = async () => {
+    if (decidedBets.length === 0) return;
+    const settlements = decidedBets.map(b => ({ betId: b.id, outcome: b.evaluation.outcome }));
+    const summary = decidedBets.reduce((acc, b) => {
+      acc[b.evaluation.outcome] = (acc[b.evaluation.outcome] || 0) + 1;
+      return acc;
+    }, {});
+    const summaryStr = Object.entries(summary).map(([k, v]) => `${v} ${k}`).join(', ');
+    if (!confirm(`Settle ${decidedBets.length} decided bets? (${summaryStr})`)) return;
+    try {
+      const response = await fetch('/api/game/bets/settle-decided', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, settlements }),
+      });
+      if (response.ok) {
+        fetchBets();
+        fetchStats();
+      }
+    } catch (err) { /* silent */ }
+  };
+
   return (
     <div className="card">
       <h2 className="text-sm font-bold tracking-wider uppercase mb-4" style={{ color: 'var(--nbc-gold)' }}>
@@ -147,9 +184,22 @@ function BetsAdmin({ gameId }) {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">
               Pending ({pending.length})
+              {decidedBets.length > 0 && (
+                <span className="ml-1 text-cyan-400">
+                  / {decidedBets.length} decided
+                </span>
+              )}
             </h3>
             {/* Bulk Settle Buttons */}
             <div className="flex gap-1">
+              {decidedBets.length > 0 && (
+                <button
+                  onClick={handleSettleDecided}
+                  className="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-600/50 hover:bg-cyan-600 transition-colors"
+                >
+                  Settle Decided ({decidedBets.length})
+                </button>
+              )}
               <button
                 onClick={() => handleBulkSettle('lost')}
                 className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-600/50 hover:bg-red-600 transition-colors"
@@ -165,12 +215,27 @@ function BetsAdmin({ gameId }) {
             </div>
           </div>
           <div className="space-y-1.5">
-            {pending.map(bet => {
+            {sortedPending.map(bet => {
               const displayOdds = bet.type === 'parlay' ? bet.combinedOdds : bet.selection?.odds;
               const isParlay = bet.type === 'parlay' && bet.legs?.length > 0;
               const isExpanded = expandedParlays.has(bet.id);
+              const { decided, outcome: suggestedOutcome, reason } = bet.evaluation;
+              const outcomeColors = {
+                won: 'bg-green-600/20 border-green-500/40',
+                lost: 'bg-red-600/20 border-red-500/40',
+                push: 'bg-gray-600/20 border-gray-500/40',
+              };
+              const outcomeBadgeColors = {
+                won: 'bg-green-600 text-white',
+                lost: 'bg-red-600 text-white',
+                push: 'bg-gray-500 text-white',
+              };
               return (
-                <div key={bet.id} className="rounded" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                <div
+                  key={bet.id}
+                  className={`rounded ${decided ? `border ${outcomeColors[suggestedOutcome] || ''}` : ''}`}
+                  style={{ background: decided ? undefined : 'rgba(0,0,0,0.2)' }}
+                >
                   <div className="px-2.5 py-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -178,6 +243,11 @@ function BetsAdmin({ gameId }) {
                           <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
                             {bet.playerInitials}
                           </span>
+                          {decided && (
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${outcomeBadgeColors[suggestedOutcome] || 'bg-gray-600 text-white'}`}>
+                              {suggestedOutcome}
+                            </span>
+                          )}
                           {isParlay && (
                             <button
                               onClick={() => toggleParlay(bet.id)}
@@ -199,27 +269,44 @@ function BetsAdmin({ gameId }) {
                           <span className="text-[10px] text-gray-500">
                             {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
                           </span>
+                          {decided && reason && (
+                            <span className="text-[9px] text-cyan-400/70 italic">
+                              {reason}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         <button
                           onClick={() => handleSettle(bet.id, 'won')}
                           disabled={settling === bet.id}
-                          className="px-2 py-1 rounded text-[10px] font-bold bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50"
+                          className={`px-2 py-1 rounded text-[10px] font-bold transition-colors disabled:opacity-50 ${
+                            decided && suggestedOutcome === 'won'
+                              ? 'bg-green-500 hover:bg-green-600 ring-1 ring-green-400'
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
                         >
                           Won
                         </button>
                         <button
                           onClick={() => handleSettle(bet.id, 'lost')}
                           disabled={settling === bet.id}
-                          className="px-2 py-1 rounded text-[10px] font-bold bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                          className={`px-2 py-1 rounded text-[10px] font-bold transition-colors disabled:opacity-50 ${
+                            decided && suggestedOutcome === 'lost'
+                              ? 'bg-red-500 hover:bg-red-600 ring-1 ring-red-400'
+                              : 'bg-red-600 hover:bg-red-700'
+                          }`}
                         >
                           Lost
                         </button>
                         <button
                           onClick={() => handleSettle(bet.id, 'push')}
                           disabled={settling === bet.id}
-                          className="px-2 py-1 rounded text-[10px] font-bold bg-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50"
+                          className={`px-2 py-1 rounded text-[10px] font-bold transition-colors disabled:opacity-50 ${
+                            decided && suggestedOutcome === 'push'
+                              ? 'bg-gray-400 hover:bg-gray-500 ring-1 ring-gray-300'
+                              : 'bg-gray-600 hover:bg-gray-700'
+                          }`}
                         >
                           Push
                         </button>

@@ -241,6 +241,30 @@ router.post('/bets/:betId/cancel', (req, res) => {
   }
 });
 
+// POST /api/game/bets/settle-decided - Settle multiple bets with individual outcomes
+router.post('/bets/settle-decided', (req, res) => {
+  try {
+    const { gameId, settlements } = req.body;
+    if (!Array.isArray(settlements) || settlements.length === 0) {
+      return res.status(400).json({ error: 'settlements array is required' });
+    }
+    const results = [];
+    for (const { betId, outcome } of settlements) {
+      if (!['won', 'lost', 'push', 'void'].includes(outcome)) continue;
+      try {
+        const bet = settleBet(gameId, betId, outcome);
+        results.push({ betId, outcome, success: true });
+      } catch (err) {
+        results.push({ betId, outcome, success: false, error: err.message });
+      }
+    }
+    res.json({ settled: results.filter(r => r.success).length, results });
+  } catch (error) {
+    console.error('Error settling decided bets:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // POST /api/game/bets/bulk-settle - Settle all pending bets
 router.post('/bets/bulk-settle', (req, res) => {
   try {

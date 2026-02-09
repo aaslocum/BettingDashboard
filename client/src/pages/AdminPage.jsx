@@ -231,7 +231,7 @@ function AdminPage() {
           {/* === MONITORING === */}
 
           {/* Betting Ledger */}
-          <BetsAdmin gameId={currentGameId} />
+          <BetsAdmin gameId={currentGameId} gameData={gameData} />
 
           {/* === ADMINISTRATIVE === */}
 

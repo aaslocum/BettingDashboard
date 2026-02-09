@@ -200,6 +200,103 @@ const PLAYER_COLORS = [
   '#E11D48', // rose
 ];
 
+// Evaluate whether a bet's outcome is decided based on current game state.
+// Returns { decided: bool, outcome: 'won'|'lost'|'push'|null, reason: string|null }
+function evaluateLegOutcome(leg, gameData) {
+  const { scores, teams, gameStatus } = gameData;
+  const totalScore = scores.home + scores.away;
+  const gameOver = gameStatus === 'completed';
+  const market = leg.market;
+  const outcome = leg.outcome;
+  const point = leg.point;
+
+  if (market === 'h2h') {
+    // Moneyline: only decidable when game is over
+    if (!gameOver) return { decided: false, outcome: null, reason: null };
+    const homeWins = scores.home > scores.away;
+    const awayWins = scores.away > scores.home;
+    const tie = scores.home === scores.away;
+    if (tie) return { decided: true, outcome: 'push', reason: 'Game ended in a tie' };
+    const betOnHome = outcome === teams.home.name;
+    const betOnAway = outcome === teams.away.name;
+    if (betOnHome) {
+      return { decided: true, outcome: homeWins ? 'won' : 'lost', reason: `${scores.away}-${scores.home} final` };
+    }
+    if (betOnAway) {
+      return { decided: true, outcome: awayWins ? 'won' : 'lost', reason: `${scores.away}-${scores.home} final` };
+    }
+    // Can't match team name — not decidable
+    return { decided: false, outcome: null, reason: null };
+  }
+
+  if (market === 'spreads') {
+    if (!gameOver) return { decided: false, outcome: null, reason: null };
+    // Determine which team this spread is for
+    const betOnHome = outcome === teams.home.name;
+    const betOnAway = outcome === teams.away.name;
+    if (!betOnHome && !betOnAway) return { decided: false, outcome: null, reason: null };
+    const teamScore = betOnHome ? scores.home : scores.away;
+    const oppScore = betOnHome ? scores.away : scores.home;
+    const adjusted = teamScore + point;
+    const reason = `${scores.away}-${scores.home} final (${point > 0 ? '+' : ''}${point})`;
+    if (adjusted > oppScore) return { decided: true, outcome: 'won', reason };
+    if (adjusted < oppScore) return { decided: true, outcome: 'lost', reason };
+    return { decided: true, outcome: 'push', reason };
+  }
+
+  if (market === 'totals') {
+    const isOver = outcome === 'Over';
+    const isUnder = outcome === 'Under';
+    if (!isOver && !isUnder) return { decided: false, outcome: null, reason: null };
+
+    if (isOver) {
+      // Over is won as soon as total exceeds the line (can't go down)
+      if (totalScore > point) return { decided: true, outcome: 'won', reason: `Total ${totalScore} > ${point}` };
+      if (totalScore === point && gameOver) return { decided: true, outcome: 'push', reason: `Total ${totalScore} = ${point}` };
+      if (gameOver) return { decided: true, outcome: 'lost', reason: `Total ${totalScore} < ${point}` };
+      return { decided: false, outcome: null, reason: null };
+    }
+
+    if (isUnder) {
+      // Under is lost as soon as total exceeds the line
+      if (totalScore > point) return { decided: true, outcome: 'lost', reason: `Total ${totalScore} > ${point}` };
+      if (totalScore === point && gameOver) return { decided: true, outcome: 'push', reason: `Total ${totalScore} = ${point}` };
+      if (gameOver) return { decided: true, outcome: 'won', reason: `Total ${totalScore} < ${point}` };
+      return { decided: false, outcome: null, reason: null };
+    }
+  }
+
+  // Player props or unknown markets — can't auto-evaluate
+  return { decided: false, outcome: null, reason: null };
+}
+
+export function evaluateBetOutcome(bet, gameData) {
+  if (!gameData || !gameData.scores || !gameData.teams) {
+    return { decided: false, outcome: null, reason: null };
+  }
+
+  if (bet.type === 'parlay') {
+    if (!bet.legs || bet.legs.length === 0) {
+      return { decided: false, outcome: null, reason: null };
+    }
+    const legResults = bet.legs.map(leg => evaluateLegOutcome(leg, gameData));
+    // If any leg is lost, the parlay is lost
+    const anyLost = legResults.some(r => r.decided && r.outcome === 'lost');
+    if (anyLost) return { decided: true, outcome: 'lost', reason: 'One or more legs lost' };
+    // If all legs decided and none lost
+    const allDecided = legResults.every(r => r.decided);
+    if (!allDecided) return { decided: false, outcome: null, reason: null };
+    // All decided: if any push, it's complicated but simplify: all won/push
+    const anyPush = legResults.some(r => r.outcome === 'push');
+    if (anyPush) return { decided: true, outcome: 'push', reason: 'All legs decided, one or more pushed' };
+    return { decided: true, outcome: 'won', reason: 'All legs won' };
+  }
+
+  // Straight bet
+  if (!bet.selection) return { decided: false, outcome: null, reason: null };
+  return evaluateLegOutcome(bet.selection, gameData);
+}
+
 // Get a consistent color for a player based on their initials
 export function getPlayerColor(initials) {
   if (!initials) return PLAYER_COLORS[0];
