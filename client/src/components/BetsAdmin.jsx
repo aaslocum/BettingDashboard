@@ -6,6 +6,19 @@ function BetsAdmin({ gameId }) {
   const [betStats, setBetStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(null);
+  const [expandedParlays, setExpandedParlays] = useState(new Set());
+
+  const toggleParlay = (betId) => {
+    setExpandedParlays(prev => {
+      const next = new Set(prev);
+      if (next.has(betId)) {
+        next.delete(betId);
+      } else {
+        next.add(betId);
+      }
+      return next;
+    });
+  };
 
   const fetchBets = useCallback(async () => {
     try {
@@ -154,63 +167,99 @@ function BetsAdmin({ gameId }) {
           <div className="space-y-1.5">
             {pending.map(bet => {
               const displayOdds = bet.type === 'parlay' ? bet.combinedOdds : bet.selection?.odds;
+              const isParlay = bet.type === 'parlay' && bet.legs?.length > 0;
+              const isExpanded = expandedParlays.has(bet.id);
               return (
-                <div key={bet.id} className="rounded px-2.5 py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
-                          {bet.playerInitials}
-                        </span>
-                        {bet.type === 'parlay' && (
-                          <span className="text-[8px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--nbc-gold)' }}>
-                            PARLAY
+                <div key={bet.id} className="rounded" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                  <div className="px-2.5 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.2)', color: 'var(--nbc-gold)' }}>
+                            {bet.playerInitials}
                           </span>
-                        )}
-                        <span className="text-xs text-white font-medium truncate">{bet.description}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {displayOdds !== undefined && (
-                          <span className={`text-xs font-bold ${getOddsColorClass(displayOdds)}`}>
-                            {formatOdds(displayOdds)}
+                          {isParlay && (
+                            <button
+                              onClick={() => toggleParlay(bet.id)}
+                              className="flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded hover:brightness-125 transition-all cursor-pointer"
+                              style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--nbc-gold)' }}
+                            >
+                              <span className="inline-block transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', fontSize: '8px' }}>▶</span>
+                              PARLAY ({bet.legs.length})
+                            </button>
+                          )}
+                          <span className="text-xs text-white font-medium truncate">{bet.description}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {displayOdds !== undefined && (
+                            <span className={`text-xs font-bold ${getOddsColorClass(displayOdds)}`}>
+                              {formatOdds(displayOdds)}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-gray-500">
+                            {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
                           </span>
-                        )}
-                        <span className="text-[10px] text-gray-500">
-                          {formatCurrency(bet.wager)} to win {formatCurrency(bet.potentialPayout)}
-                        </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleSettle(bet.id, 'won')}
-                        disabled={settling === bet.id}
-                        className="px-2 py-1 rounded text-[10px] font-bold bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50"
-                      >
-                        Won
-                      </button>
-                      <button
-                        onClick={() => handleSettle(bet.id, 'lost')}
-                        disabled={settling === bet.id}
-                        className="px-2 py-1 rounded text-[10px] font-bold bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
-                      >
-                        Lost
-                      </button>
-                      <button
-                        onClick={() => handleSettle(bet.id, 'push')}
-                        disabled={settling === bet.id}
-                        className="px-2 py-1 rounded text-[10px] font-bold bg-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50"
-                      >
-                        Push
-                      </button>
-                      <button
-                        onClick={() => handleSettle(bet.id, 'void')}
-                        disabled={settling === bet.id}
-                        className="px-2 py-1 rounded text-[10px] font-bold bg-purple-600/70 hover:bg-purple-600 transition-colors disabled:opacity-50"
-                      >
-                        Void
-                      </button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleSettle(bet.id, 'won')}
+                          disabled={settling === bet.id}
+                          className="px-2 py-1 rounded text-[10px] font-bold bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          Won
+                        </button>
+                        <button
+                          onClick={() => handleSettle(bet.id, 'lost')}
+                          disabled={settling === bet.id}
+                          className="px-2 py-1 rounded text-[10px] font-bold bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Lost
+                        </button>
+                        <button
+                          onClick={() => handleSettle(bet.id, 'push')}
+                          disabled={settling === bet.id}
+                          className="px-2 py-1 rounded text-[10px] font-bold bg-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50"
+                        >
+                          Push
+                        </button>
+                        <button
+                          onClick={() => handleSettle(bet.id, 'void')}
+                          disabled={settling === bet.id}
+                          className="px-2 py-1 rounded text-[10px] font-bold bg-purple-600/70 hover:bg-purple-600 transition-colors disabled:opacity-50"
+                        >
+                          Void
+                        </button>
+                      </div>
                     </div>
                   </div>
+                  {/* Expandable Parlay Legs */}
+                  {isParlay && isExpanded && (
+                    <div className="px-2.5 pb-2 pt-0.5">
+                      <div className="rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        {bet.legs.map((leg, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between px-2 py-1.5"
+                            style={{ borderBottom: idx < bet.legs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="text-[9px] text-gray-600 font-mono w-3 flex-shrink-0">{idx + 1}.</span>
+                              <span className="text-[11px] text-gray-300 truncate">{leg.description}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {leg.point !== null && leg.point !== undefined && (
+                                <span className="text-[10px] text-gray-500">{leg.point > 0 ? '+' : ''}{leg.point}</span>
+                              )}
+                              <span className={`text-[11px] font-bold ${getOddsColorClass(leg.odds)}`}>
+                                {formatOdds(leg.odds)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -233,20 +282,61 @@ function BetsAdmin({ gameId }) {
                 void: 'text-purple-400',
                 cancelled: 'text-gray-500'
               };
+              const isParlay = bet.type === 'parlay' && bet.legs?.length > 0;
+              const isExpanded = expandedParlays.has(bet.id);
               return (
-                <div key={bet.id} className="flex items-center justify-between rounded px-2.5 py-1.5 text-xs" style={{ background: 'rgba(0,0,0,0.15)' }}>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--nbc-gold)' }}>
-                      {bet.playerInitials}
-                    </span>
-                    <span className="text-gray-400 truncate">{bet.description}</span>
+                <div key={bet.id} className="rounded" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                  <div className="flex items-center justify-between px-2.5 py-1.5 text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--nbc-gold)' }}>
+                        {bet.playerInitials}
+                      </span>
+                      {isParlay && (
+                        <button
+                          onClick={() => toggleParlay(bet.id)}
+                          className="flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded hover:brightness-125 transition-all cursor-pointer"
+                          style={{ background: 'rgba(212,175,55,0.08)', color: 'var(--nbc-gold)' }}
+                        >
+                          <span className="inline-block transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', fontSize: '8px' }}>▶</span>
+                          {bet.legs.length}
+                        </button>
+                      )}
+                      <span className="text-gray-400 truncate">{bet.description}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-gray-500">{formatCurrency(bet.wager)}</span>
+                      <span className={`font-bold uppercase ${statusColors[bet.status] || 'text-gray-400'}`}>
+                        {bet.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-gray-500">{formatCurrency(bet.wager)}</span>
-                    <span className={`font-bold uppercase ${statusColors[bet.status] || 'text-gray-400'}`}>
-                      {bet.status}
-                    </span>
-                  </div>
+                  {/* Expandable Parlay Legs */}
+                  {isParlay && isExpanded && (
+                    <div className="px-2.5 pb-1.5">
+                      <div className="rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        {bet.legs.map((leg, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between px-2 py-1.5"
+                            style={{ borderBottom: idx < bet.legs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="text-[9px] text-gray-600 font-mono w-3 flex-shrink-0">{idx + 1}.</span>
+                              <span className="text-[11px] text-gray-300 truncate">{leg.description}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {leg.point !== null && leg.point !== undefined && (
+                                <span className="text-[10px] text-gray-500">{leg.point > 0 ? '+' : ''}{leg.point}</span>
+                              )}
+                              <span className={`text-[11px] font-bold ${getOddsColorClass(leg.odds)}`}>
+                                {formatOdds(leg.odds)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
