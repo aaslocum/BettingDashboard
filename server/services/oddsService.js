@@ -197,6 +197,7 @@ export async function fetchPlayerProps(apiKey, eventId = null) {
         id: game.id,
         homeTeam: game.home_team,
         awayTeam: game.away_team,
+        commenceTime: game.commence_time,
         props
       }],
       timestamp: new Date().toISOString(),
@@ -601,6 +602,7 @@ export function getMockPlayerProps() {
       id: 'superbowl-lx-2026',
       homeTeam: 'Seattle Seahawks',
       awayTeam: 'New England Patriots',
+      commenceTime: new Date().toISOString(),
       props: [
         // Passing Yards
         { market: 'player_pass_yds', marketName: 'Passing Yards', player: 'Sam Darnold', name: 'Over', line: 228.5, odds: -110 },

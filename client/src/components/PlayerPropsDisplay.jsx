@@ -203,7 +203,8 @@ function PlayerPropsDisplay({ propsData, displayMode = false, onBetClick, onChar
                           eventId: propsData.games[0].id,
                           key: `${prop.market}__${prop.player}__${prop.name}`,
                           label: `${prop.player} ${prop.marketName} ${prop.name}${prop.line != null ? ' ' + prop.line : ''}`,
-                          currentOdds: prop.odds
+                          currentOdds: prop.odds,
+                          commenceTime: propsData.games[0].commenceTime
                         });
                       }}
                       className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5 ml-1 flex-shrink-0"

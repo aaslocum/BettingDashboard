@@ -255,6 +255,7 @@ function DisplayPage() {
           oddsKey={chartInfo.key}
           label={chartInfo.label}
           currentOdds={chartInfo.currentOdds}
+          commenceTime={chartInfo.commenceTime}
           onClose={() => setChartInfo(null)}
         />
       )}

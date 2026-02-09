@@ -84,7 +84,8 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
                           eventId: game.id,
                           key: `h2h__${o.name}`,
                           label: `${o.name} Moneyline`,
-                          currentOdds: o.price
+                          currentOdds: o.price,
+                          commenceTime: game.commenceTime
                         });
                       }}
                       className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
@@ -134,7 +135,8 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
                         eventId: game.id,
                         key: `spreads__${o.name}`,
                         label: `${o.name} ${o.point > 0 ? '+' : ''}${o.point}`,
-                        currentOdds: o.price
+                        currentOdds: o.price,
+                        commenceTime: game.commenceTime
                       });
                     }}
                     className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5 ml-1 flex-shrink-0"
@@ -178,7 +180,8 @@ function OddsDisplay({ oddsData, displayMode = false, onBetClick, onChartClick }
                         eventId: game.id,
                         key: `totals__${o.name}`,
                         label: `${o.name} ${o.point} Total Points`,
-                        currentOdds: o.price
+                        currentOdds: o.price,
+                        commenceTime: game.commenceTime
                       });
                     }}
                     className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5 ml-1 flex-shrink-0"
@@ -233,7 +236,8 @@ function OddsDisplayTV({ game, bookmakers, onChartClick }) {
                         eventId: game.id,
                         key: `h2h__${o.name}`,
                         label: `${o.name} Moneyline`,
-                        currentOdds: o.price
+                        currentOdds: o.price,
+                        commenceTime: game.commenceTime
                       })}
                       className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
                       title="View odds history"
@@ -264,7 +268,8 @@ function OddsDisplayTV({ game, bookmakers, onChartClick }) {
                         eventId: game.id,
                         key: `spreads__${o.name}`,
                         label: `${o.name} ${o.point > 0 ? '+' : ''}${o.point}`,
-                        currentOdds: o.price
+                        currentOdds: o.price,
+                        commenceTime: game.commenceTime
                       })}
                       className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
                       title="View odds history"
@@ -293,7 +298,8 @@ function OddsDisplayTV({ game, bookmakers, onChartClick }) {
                         eventId: game.id,
                         key: `totals__${o.name}`,
                         label: `${o.name} ${o.point} Total Points`,
-                        currentOdds: o.price
+                        currentOdds: o.price,
+                        commenceTime: game.commenceTime
                       })}
                       className="text-gray-600 hover:text-yellow-500 transition-colors p-0.5"
                       title="View odds history"
