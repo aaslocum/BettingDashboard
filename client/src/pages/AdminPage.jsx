@@ -6,6 +6,7 @@ import PlayerStats from '../components/PlayerStats';
 import BulkAssignModal from '../components/BulkAssignModal';
 import GameSelector from '../components/GameSelector';
 import BetsAdmin from '../components/BetsAdmin';
+import AccountSettlement from '../components/AccountSettlement';
 import OddsImportPanel from '../components/OddsImportPanel';
 import { getQuarterName, formatCurrency } from '../utils/helpers';
 
@@ -232,6 +233,9 @@ function AdminPage() {
 
           {/* Betting Ledger */}
           <BetsAdmin gameId={currentGameId} gameData={gameData} />
+
+          {/* Account Settlement - Cross-game */}
+          <AccountSettlement />
 
           {/* === ADMINISTRATIVE === */}
 
